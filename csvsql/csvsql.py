@@ -19,3 +19,12 @@ def get_sql_statements_from_contents(contents):
     sentences_from_newline = [ s.split(os.linesep) for s in sentences_from_semicolon ]
     return [ s.strip() for s in itertools.chain.from_iterable(sentences_from_newline) if len(s.strip())>0 ]
 
+
+def get_sql_statements_from_file(path):
+    """ returns the last SELECT statement from the specified file in path.
+        In case there's not such a statement, it returns None
+        It is assumed the file does exist """
+    contents = pathlib.Path(path).read_text()
+    statements = get_sql_statements_from_contents(contents)
+    return statements[-1] if statements else None
+

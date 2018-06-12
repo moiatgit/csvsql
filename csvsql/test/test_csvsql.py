@@ -1,5 +1,5 @@
 import pytest
-from querycsv import csvsql
+from csvsql import csvsql
 
 
 def test_get_statements_from_contents_when_theres_just_one():

@@ -61,16 +61,19 @@ import csv
 import sqlite3
 import pathlib
 import logging
+import csvsql
 
 from contextlib import contextmanager
 
 VERSION = "5.0.0"
+
 
 def print_error_and_exit(msg):
     """ prints msg to the standard error output and exists """
     logging.error(msg)
     print(msg, file=sys.stderr)
     sys.exit(1)
+
 
 def set_logging_config(filename="/tmp/%s.log"%sys.argv[0], level=logging.INFO):
     """ sets the filename as the destination of the logs """
@@ -79,6 +82,8 @@ def set_logging_config(filename="/tmp/%s.log"%sys.argv[0], level=logging.INFO):
 
 # Source: Aaron Watters posted to gadfly-rdbms@egroups.com 1999-01-18
 # Modified version taken from sqliteplus.py by Florent Xicluna
+
+
 def pretty_print(rows, fp):
     headers = rows.pop(0)
     rows = [[unicode(col) for col in row] for row in rows]
@@ -143,6 +148,7 @@ def as_connection(db):
     else:
         yield db
 
+
 def import_array(db, array, table_name, overwrite=False):
     # XXX this one seems to be unused!
 
@@ -161,29 +167,37 @@ def import_array(db, array, table_name, overwrite=False):
             conn.execute(sql, vals)
         conn.commit()
 
-def import_csv(db, filename, table_name=None, overwrite=False):
-    """ imports the contents of the csv filename into db """
-    # TODO: optional parameters are never used!
-    # TODO: if you replace filename by its contents, it would be easier to pytest!
-    table_name = table_name if table_name else get_table_name(filename)
 
-    with as_connection(db) as conn:
-        if table_exists(conn, table_name) and not overwrite:
-            return
+def import_csv(db, contents, table_name):
+    """ Imports the contents into a table named table_name in db
 
-        dialect = csv.Sniffer().sniff(open(filename, 'r').readline())
-        reader = csv.reader(open(filename, 'r'), dialect)
-        column_names = reader.next()
-        colstr = ",".join('[{0}]'.format(col) for col in column_names)
-        conn.execute('drop table if exists %s;' % table_name)
-        conn.execute('create table %s (%s);' % (table_name, colstr))
-        for row in reader:
-            vals = [unicode(cell, 'utf-8') for cell in row]
-            params = ','.join('?' for i in range(len(vals)))
-            sql = 'insert into %s values (%s);' % (table_name, params)
-            conn.execute(sql, vals)
-        conn.commit()
+        db: a connection to the database
+        contents: the csv contents
+        table_name: the name of the table where to store the contents. If the table already
+                    exists, its former contents will be overwritten
+    """
+    dialect = csv.Sniffer().sniff()
+    reader = csv.reader(open(filename, 'r'), dialect)
+    column_names = reader.next()
+    colstr = ",".join('[{0}]'.format(col) for col in column_names)
+    conn.execute('drop table if exists %s;' % table_name)
+    conn.execute('create table %s (%s);' % (table_name, colstr))
+    for row in reader:
+        vals = [unicode(cell, 'utf-8') for cell in row]
+        params = ','.join('?' for i in range(len(vals)))
+        sql = 'insert into %s values (%s);' % (table_name, params)
+        conn.execute(sql, vals)
+    conn.commit()
 
+def import_csv_list(db, filenames):
+    """ imports the contents of the filenames 
+        Filenames is a list of paths to csv files
+    """
+    for filename in filenames:
+        path = pathlib.Path(path)
+        contents = path.read_text()
+        table_name = path.stem
+        import_csv(db, contents, table_name)
 
 def table_exists(conn, table_name):
     # TODO: replace by conn.execute('select name from sqlite_master where type='table' and name='{table_name}';')
@@ -261,11 +275,6 @@ def query_csv_file(scriptfile, *args, **kwargs):
     return query_csv(cmds, *args, **kwargs)
 
 
-def print_help():
-    print(__doc__.strip())
-
-
-
 def get_args(arguments):
     """ processes the arguments in args and returns a dictionary with the parsed arguments.
 
@@ -290,10 +299,12 @@ def get_args(arguments):
     args = p.parse_args(arguments[1:])
     return vars(args)
 
+
 def assert_file_exists(path):
     """ Asserts path is an existing file. Otherwise, displays an error and stops execution """
     if not pathlib.Path(path).is_file():
         print_error_and_exit("File %s not found"%path)
+
 
 def assert_file_does_not_exist(path):
     """ Asserts path is a non existing file. Otherwise, displays an error and stops execution """
@@ -325,27 +336,28 @@ def assert_valid_args(args):
         assert_file_exists(args['script'])
 
 
-
-def get_last_select_statement_from_file(path):
-    """ returns the last SELECT statement from the specified file in path.
-        It is assumed the file does exist """
-    contents = pathlib.Path(path).read_text()
-    return get_last_select_statement_from_contents(contents)
-
-
-def get_query(args):
-    """ given the arguments already validated, it returns the query to be executed.
+def get_statements(args):
+    """ given the arguments already validated, it returns the list of statements to be executed.
 
         If 'query' is directly specified in args. it uses it. Otherwise, it gets the last SELECT in the --script file
         If there's no such SELECT, it displays an error and stops execution.
     """
     if 'query' in args:
-        return args['query']
-    query = get_last_select_statement_from_file(args['script'])
-    if query:
-        return query
-    print_error_and_exit("File %s doesn't contain a proper SELECT statement"%args['script'])
+        statements = csvsql.get_sql_statements_from_contents(args['query'])
+    else:
+        statements = csvsql.get_sql_statements_from_file(args['script'])
+    if statements:
+        return statements
+    print_error_and_exit("Not proper SQL statement has been specified")
 
+
+def get_db(args):
+    """ given the arguments already validated, it returns the db connection containing all the data """
+    if 'use' in args:
+         return open_db(args['use'])
+    db = open_db(args.get('db', None))
+    import_csv_list(db, args['input'])
+    return db
 
 
 def write_output(results, filename=None):
@@ -368,7 +380,8 @@ def write_output(results, filename=None):
 def main():
     args = get_args(sys.argv)
     assert_valid_args(args)
-    query = get_query(args)
+    statements = get_statements(args)
+    conn = get_db(args)
     #optlist, arglist = getopt.getopt(sys.argv[1:], "i:u:o:f:Vhs")
     #flags = dict(optlist)
 
