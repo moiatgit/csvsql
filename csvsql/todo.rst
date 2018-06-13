@@ -4,6 +4,10 @@ Currently:
 
   (done) Current problem: check table contents (see assert False on test_csvsql.py)
 
+  currently developing test_execute_statements_basic() to dev execute_statements() method that should
+  return the results of executing a list of statments
+
+
 Enhancements
 
 - add options to clean up the csv data:

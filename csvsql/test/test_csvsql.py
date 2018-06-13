@@ -86,6 +86,21 @@ def test_import_csv_list(monkeypatch):
     for filename in files.keys():
         assert_table_contains_csv_contents(db, filename[:-4], files[filename])
 
+
+
+def test_execute_statements_basic():
+    db = sqlite3.connect(':memory:')
+    db.execute('create table my_table (un, dos)')
+    db.execute('insert into my_table values (1, 2)')
+    db.execute('insert into my_table values (3, 4)')
+    statements = [
+            'select * from my_table'
+            ]
+    results = csvsql.execute_statements(db, statements)
+    print("XXX results: %s"%results)
+    assert False
+
+
 # Helping functions
 def assert_table_contains_csv_contents(db, table_name, csv_contents):
     """ given a sqlite3 table and a string with the csv contents, it checks whether there's a table in db

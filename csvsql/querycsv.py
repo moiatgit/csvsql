@@ -154,16 +154,6 @@ def as_connection(db):
         yield db
 
 
-def import_csv_list(db, filenames):
-    """ imports the contents of the filenames 
-        Filenames is a list of paths to csv files
-    """
-    for filename in filenames:
-        path = pathlib.Path(path)
-        table_name = path.stem
-        with path.open() as fo:
-            csvsql.import_csv(db, fo, table_name)
-
 def table_exists(conn, table_name):
     # TODO: replace by conn.execute('select name from sqlite_master where type='table' and name='{table_name}';')
     try:
@@ -321,7 +311,7 @@ def get_db(args):
     if 'use' in args:
          return open_db(args['use'])
     db = open_db(args.get('db', None))
-    import_csv_list(db, args['input'])
+    csvsql.import_csv_list(db, args['input'])
     return db
 
 
@@ -346,7 +336,8 @@ def main():
     args = get_args(sys.argv)
     assert_valid_args(args)
     statements = get_statements(args)
-    conn = get_db(args)
+    db = get_db(args)
+    results = execute_statements(db, statements)
     #optlist, arglist = getopt.getopt(sys.argv[1:], "i:u:o:f:Vhs")
     #flags = dict(optlist)
 
