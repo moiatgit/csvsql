@@ -5,6 +5,7 @@ import os
 import itertools
 import re
 import csv
+import pathlib
 
 _DEFAULT_COLUMN_NAME = '__COL'
 
@@ -65,4 +66,19 @@ def import_csv(db, contents_fileobject, table_name, dialect=csv.excel):
         sql = 'insert into %s values (%s);' % (table_name, params)
         db.execute(sql, row)
     db.commit()
+
+
+def import_csv_list(db, filenames):
+    """ imports the contents of the filenames 
+        Filenames is a list of paths to csv files
+    """
+    for filename in filenames:
+        path = pathlib.Path(filename)
+        table_name = path.stem
+        print("XXX table name: %s"%table_name)
+        #with path.open() as fo:
+        #    csvsql.import_csv(db, fo, table_name)
+        fo = path.open()
+        import_csv(db, fo, table_name)
+        fo.close()
 

@@ -2,6 +2,7 @@ import pytest
 import io
 import sqlite3
 import csv
+import pathlib
 from csvsql import csvsql
 
 
@@ -73,3 +74,33 @@ def test_import_csv_unheaded_cols():
     #assert all(found[0] == expected for found , expected in zip( curs.description, expected_headers)), "headers don't match"
     assert [ found[0] for found in curs.description ] == expected_headers
     assert curs.fetchall() == rows
+
+
+def test_import_csv_list(monkeypatch):
+    files = [ 
+            'f1.csv',
+            'f2.csv',
+            'f3.csv',
+    ]
+    contents = [ 
+            'a,b,c\n1,2,3\n4,5,6', 
+            'one,two,three\na,b,c\nd,e,f', 
+            'un,dos,tres\na,2,3\nb,2,3'
+    ]
+    def fake_stem():
+        """ returns the name of each file """
+        print("XXX fake_stem first!")
+        for name in files.keys():
+            print("XXX prior to yielding name %s"%name)
+            yield name[:-4]
+    def fake_open(self_):
+        """ returns a fileobject of each file """
+        for content in contents:
+            print("XXX prior to yielding content '%s'"%content)
+            yield io.StringIO(content)
+    monkeypatch.setattr(pathlib.Path, 'stem', fake_stem)
+    monkeypatch.setattr(pathlib.Path, 'open', fake_open)
+    db = sqlite3.connect(':memory:')
+    dialect = csv.excel
+    csvsql.import_csv_list(db, files)
+    assert False
