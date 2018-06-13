@@ -6,6 +6,8 @@ import itertools
 import re
 import csv
 
+_DEFAULT_COLUMN_NAME = '__COL'
+
 def get_sql_statements_from_contents(contents):
     """ returns a list of SQL statements found in contents
 
@@ -38,9 +40,24 @@ def import_csv(db, contents_fileobject, table_name, dialect=csv.excel):
         table_name: the name of the table where to store the contents. If the table already
                     exists, its former contents will be overwritten
     """
+
     reader = csv.reader(contents_fileobject, dialect)
-    column_names = next(reader, None)
-    colstr = ",".join('[{0}]'.format(col) for col in column_names)
+    source_headers = next(reader, None)
+    column_counter = 0
+    default_column_name = _DEFAULT_COLUMN_NAME + "%%0%sd"%len(str(len(source_headers)))
+    def normalize_column_name(source_column_name):
+        """ given the name of the column as found in the csv source, it returns a normalized
+            version. This normalization consists on:
+            - if the source_column_name is not empty, it is accepted as the normalized name
+            - otherwise, _DEFAULT_COLUMN_NAME is placed instead
+            This method increments column_counter every time it is called.
+        """
+        nonlocal column_counter
+        column_counter += 1
+        return source_column_name if source_column_name else default_column_name%column_counter
+
+    colstr = ','.join( normalize_column_name(col) for col in source_headers )
+    print("XXX colstr: %s"%colstr)
     db.execute('drop table if exists %s;' % table_name)
     db.execute('create table %s (%s);' % (table_name, colstr))
     for row in reader:

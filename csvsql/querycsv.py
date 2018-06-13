@@ -39,6 +39,11 @@ Main changes in this version:
 
 - addapted to python3
 - replaced getopt by argparse
+- non tested for platforms other than gnu/linux
+- non encoding aware: encoding is by default utf-8.
+  XXX In future enhancements it will be possible to specify the encoding of the input files
+- non csv dialect aware: csv dialect is by csv.excel
+  XXX In future enhancements it will be possible to specify dialect variants
 
 
 Improvements:
@@ -149,56 +154,15 @@ def as_connection(db):
         yield db
 
 
-def import_array(db, array, table_name, overwrite=False):
-    # XXX this one seems to be unused!
-
-    with as_connection(db) as conn:
-        if table_exists(conn, table_name) and not overwrite:
-            return
-
-        column_names = array[0]
-        colstr = ",".join('[{0}]'.format(col) for col in column_names)
-        conn.execute('drop table if exists %s;' % table_name)
-        conn.execute('create table %s (%s);' % (table_name, colstr))
-        for row in array[1:]:
-            vals = [cell for cell in row]
-            params = ','.join('?' for i in range(len(vals)))
-            sql = 'insert into %s values (%s);' % (table_name, params)
-            conn.execute(sql, vals)
-        conn.commit()
-
-
-def import_csv(db, contents, table_name):
-    """ Imports the contents into a table named table_name in db
-
-        db: a connection to the database
-        contents: the csv contents
-        table_name: the name of the table where to store the contents. If the table already
-                    exists, its former contents will be overwritten
-    """
-    dialect = csv.Sniffer().sniff(contents)
-    contents_buffer = io.StringIO(contents)
-    reader = csv.reader(contents_buffer, dialect)
-    column_names = next(reader, None)
-    colstr = ",".join('[{0}]'.format(col) for col in column_names)
-    conn.execute('drop table if exists %s;' % table_name)
-    conn.execute('create table %s (%s);' % (table_name, colstr))
-    for row in reader:
-        vals = [unicode(cell, 'utf-8') for cell in row]
-        params = ','.join('?' for i in range(len(vals)))
-        sql = 'insert into %s values (%s);' % (table_name, params)
-        conn.execute(sql, vals)
-    conn.commit()
-
 def import_csv_list(db, filenames):
     """ imports the contents of the filenames 
         Filenames is a list of paths to csv files
     """
     for filename in filenames:
         path = pathlib.Path(path)
-        contents = path.read_text()
         table_name = path.stem
-        import_csv(db, contents, table_name)
+        with path.open() as fo:
+            csvsql.import_csv(db, fo, table_name)
 
 def table_exists(conn, table_name):
     # TODO: replace by conn.execute('select name from sqlite_master where type='table' and name='{table_name}';')

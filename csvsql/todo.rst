@@ -1,12 +1,6 @@
 Currently:
 
-- I'm reprogramming import_csv() method
-
-  It should go to csvsql
-
-  (done) The problem is that csv.reader() seems to be reluctant to split properly by lines
-
-
+- now import_csv() basic is done, it's time to check import_csv_list() and then bak to main()
 
 Enhancements
 
@@ -20,3 +14,4 @@ Enhancements
   - keep only rows with id in a set
   - allow specification of dialect particularities (by default csv.excel) and for encoding (by
     default utf-8)
+  - allow specifying the default name of missing headed columns (by default '__COLn')

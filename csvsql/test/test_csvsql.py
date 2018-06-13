@@ -56,3 +56,20 @@ def test_import_csv_basic_usage():
     assert len(curs.description) == len(headers)
     assert all(found[0] == expected for found , expected in zip( curs.description, headers)), "headers don't match"
     assert curs.fetchall() == rows
+
+
+def test_import_csv_unheaded_cols():
+    headers = ['un', '' , 'tres', '', '', '', '', '', '', '', '', 'dotze' ]
+    rows = [ ( '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12' ) ]
+    contents = "%s\n%s"%(",".join(headers), "\n".join((",".join(row) for row in rows)))
+    contents_fileobject = io.StringIO(contents)
+    table_name = "my_table"
+    db = sqlite3.connect(':memory:')
+    dialect = csv.excel
+    expected_headers = [ 'un', '__COL02', 'tres' ] + [ '__COL%02d'%i for i in range(4, 12) ] + [ 'dotze']
+    csvsql.import_csv(db, contents_fileobject, table_name, dialect=dialect)
+    curs = db.execute('select * from my_table')
+    assert len(curs.description) == len(headers)
+    #assert all(found[0] == expected for found , expected in zip( curs.description, expected_headers)), "headers don't match"
+    assert [ found[0] for found in curs.description ] == expected_headers
+    assert curs.fetchall() == rows
