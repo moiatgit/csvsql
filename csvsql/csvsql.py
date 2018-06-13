@@ -75,10 +75,5 @@ def import_csv_list(db, filenames):
     for filename in filenames:
         path = pathlib.Path(filename)
         table_name = path.stem
-        print("XXX table name: %s"%table_name)
-        #with path.open() as fo:
-        #    csvsql.import_csv(db, fo, table_name)
-        fo = path.open()
-        import_csv(db, fo, table_name)
-        fo.close()
-
+        with path.open() as fo:
+            import_csv(db, fo, table_name)

@@ -2,7 +2,7 @@ Currently:
 
 - now import_csv() basic is done, it's time to check import_csv_list() and then bak to main()
 
-  Current problem: check table contents (see assert False on test_csvsql.py)
+  (done) Current problem: check table contents (see assert False on test_csvsql.py)
 
 Enhancements
 
