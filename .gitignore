@@ -2,3 +2,5 @@
 *.pyc
 .*.swp
 .pytest_cache/
+__pycache__/
+.cache/

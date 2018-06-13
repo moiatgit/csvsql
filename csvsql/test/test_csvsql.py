@@ -1,5 +1,9 @@
 import pytest
+import io
+import sqlite3
+import csv
 from csvsql import csvsql
+
 
 
 def test_get_statements_from_contents_when_theres_just_one():
@@ -38,3 +42,17 @@ def test_get_statements_from_contents_ignoring_newlines_within():
     result = csvsql.get_sql_statements_from_contents(contents)
     assert result == expected
 
+
+def test_import_csv_basic_usage():
+    headers = ['un', 'dos', 'tres' ]
+    rows = [ ( '1', '2', '3' ), ( '4', '5', '6' ) ]
+    contents = "%s\n%s"%(",".join(headers), "\n".join((",".join(row) for row in rows)))
+    contents_fileobject = io.StringIO(contents)
+    table_name = "my_table"
+    db = sqlite3.connect(':memory:')
+    dialect = csv.excel
+    csvsql.import_csv(db, contents_fileobject, table_name, dialect=dialect)
+    curs = db.execute('select * from my_table')
+    assert len(curs.description) == len(headers)
+    assert all(found[0] == expected for found , expected in zip( curs.description, headers)), "headers don't match"
+    assert curs.fetchall() == rows

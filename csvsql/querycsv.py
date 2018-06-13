@@ -176,9 +176,10 @@ def import_csv(db, contents, table_name):
         table_name: the name of the table where to store the contents. If the table already
                     exists, its former contents will be overwritten
     """
-    dialect = csv.Sniffer().sniff()
-    reader = csv.reader(open(filename, 'r'), dialect)
-    column_names = reader.next()
+    dialect = csv.Sniffer().sniff(contents)
+    contents_buffer = io.StringIO(contents)
+    reader = csv.reader(contents_buffer, dialect)
+    column_names = next(reader, None)
     colstr = ",".join('[{0}]'.format(col) for col in column_names)
     conn.execute('drop table if exists %s;' % table_name)
     conn.execute('create table %s (%s);' % (table_name, colstr))
