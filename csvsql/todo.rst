@@ -2,8 +2,7 @@ Currently:
 
 - now import_csv() basic is done, it's time to check import_csv_list() and then bak to main()
 
-  Current problem: I'm testing import_csv_list() The problem is that stem is a property and I don't
-  know how to mock it!
+  Current problem: check table contents (see assert False on test_csvsql.py)
 
 Enhancements
 

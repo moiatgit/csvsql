@@ -87,20 +87,27 @@ def test_import_csv_list(monkeypatch):
             'one,two,three\na,b,c\nd,e,f', 
             'un,dos,tres\na,2,3\nb,2,3'
     ]
-    def fake_stem():
-        """ returns the name of each file """
-        print("XXX fake_stem first!")
-        for name in files.keys():
-            print("XXX prior to yielding name %s"%name)
-            yield name[:-4]
+    file_index = 0
     def fake_open(self_):
         """ returns a fileobject of each file """
-        for content in contents:
-            print("XXX prior to yielding content '%s'"%content)
-            yield io.StringIO(content)
-    monkeypatch.setattr(pathlib.Path, 'stem', fake_stem)
+        nonlocal file_index
+        fo = io.StringIO(contents[file_index])
+        file_index += 1
+        return fo
     monkeypatch.setattr(pathlib.Path, 'open', fake_open)
     db = sqlite3.connect(':memory:')
     dialect = csv.excel
     csvsql.import_csv_list(db, files)
+    tables_in_db = set( table[0] for table in db.execute('select name from sqlite_master where type="table";').fetchall() )
+    assert set(('f1', 'f2', 'f3')) <= tables_in_db
+    assert False, "Check the contents of the tables are the expected"
+
+
+
+# Helping functions
+def assert_table_contains_csv_contents(db, table_name, csv_contents):
+    """ given a sqlite3 table and a string with the csv contents, it checks whether there's a table in db
+    named as table_name and containing the csv_contents (with the first row as headers) """
+    curs = db.execute('select * from %s'%table_name)
     assert False
+    # To be developed
