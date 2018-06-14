@@ -77,3 +77,12 @@ def import_csv_list(db, filenames):
         table_name = path.stem
         with path.open() as fo:
             import_csv(db, fo, table_name)
+
+def execute_statement(db, statement):
+    """ executes an sql statement on db and returns the results """
+    curs = db.execute(statement)
+    return [tuple([item[0] for item in curs.description])] + list(curs) if curs.description else []
+
+def execute_statements(db, statements):
+    """ executes a list of sql statements on db and returns the list of results """
+    return [ execute_statement(db, statement) for statement in statements ]

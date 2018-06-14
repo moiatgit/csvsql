@@ -88,17 +88,28 @@ def test_import_csv_list(monkeypatch):
 
 
 
-def test_execute_statements_basic():
+def test_execute_statement_basic():
     db = sqlite3.connect(':memory:')
     db.execute('create table my_table (un, dos)')
     db.execute('insert into my_table values (1, 2)')
     db.execute('insert into my_table values (3, 4)')
+    statement = 'select * from my_table'
+    results = csvsql.execute_statement(db, statement)
+    print("XXX results: %s"%results)
+    assert results == [ ('un', 'dos'), (1, 2), (3, 4) ]
+
+
+def test_execute_statements_basic():
+    db = sqlite3.connect(':memory:')
     statements = [
+            'create table my_table (un, dos)',
+            'insert into my_table values (1, 2)',
+            'insert into my_table values (3, 4)',
             'select * from my_table'
             ]
     results = csvsql.execute_statements(db, statements)
     print("XXX results: %s"%results)
-    assert False
+    assert results == [ [], [], [], [ ('un', 'dos'), (1, 2), (3, 4) ] ]
 
 
 # Helping functions
