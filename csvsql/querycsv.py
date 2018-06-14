@@ -2,7 +2,7 @@
 """
 Executes SQL on a delimited text file.
 
-This project is a fork of R.Dreas Nielsen's querycsv
+This project is a fork of R. Dreas Nielsen's querycsv
 
 Licensed under the GNU General Public License version 3.
 
@@ -51,10 +51,6 @@ Improvements:
 
 """
 
-# TODO: add logging. e.g. on import_csv() if not overwrite, the file is ignored on dups
-# replace getopt by argparse
-
-
 #from __future__ import print_function
 #from __future__ import unicode_literals
 #from __future__ import division
@@ -65,7 +61,6 @@ import argparse
 import csv
 import sqlite3
 import pathlib
-import logging
 import csvsql
 
 from contextlib import contextmanager
@@ -75,14 +70,8 @@ VERSION = "5.0.0"
 
 def print_error_and_exit(msg):
     """ prints msg to the standard error output and exists """
-    logging.error(msg)
     print(msg, file=sys.stderr)
     sys.exit(1)
-
-
-def set_logging_config(filename="/tmp/%s.log"%sys.argv[0], level=logging.INFO):
-    """ sets the filename as the destination of the logs """
-    logging.basicConfig(filename=filename,level=level, format="%(asctime)s %(levelname)s: %(message)s")
 
 
 # Source: Aaron Watters posted to gadfly-rdbms@egroups.com 1999-01-18
@@ -331,43 +320,55 @@ def write_output(results, filename=None):
     else:
         pretty_print(results, sys.stdout)
 
-
-def main():
-    args = get_args(sys.argv)
+def csvsql_process_cml_args(clargs):
+    """ This method interprets the commandline arguments in clargs (typically the contents of sys.args) and
+    executes the required statements on the required data.
+    Finally, it writes out the results of the last statement to the required output destination.
+    """
+    args = get_args(clargs)
     assert_valid_args(args)
     statements = get_statements(args)
     db = get_db(args)
-    results = execute_statements(db, statements)
-    #optlist, arglist = getopt.getopt(sys.argv[1:], "i:u:o:f:Vhs")
-    #flags = dict(optlist)
+    results = csvsql.execute_statements(db, statements)
+    write_output(results[-1], vars(args).get('output', None))
 
-    #outfile = flags.get('-o', None)
-    #usefile = flags.get('-u', None)
 
-    #execscript = '-s' in flags
-    #sqlcmd = " ".join(arglist)
+#def main():
+    #csvsql_process_cml_args(sys.args)
+    #args = get_args(sys.argv)
+    #assert_valid_args(args)
+    #statements = get_statements(args)
+    #db = get_db(args)
+    #results = csvsql.execute_statements(db, statements)
+    ##optlist, arglist = getopt.getopt(sys.argv[1:], "i:u:o:f:Vhs")
+    ##flags = dict(optlist)
 
-    #if usefile:
-    #    if execscript:
-    #        # sqlcmd should be the script file name
-    #        results = query_sqlite_file(sqlcmd, usefile)
-    #    else:
-    #        results = query_sqlite(sqlcmd, usefile)
-    #else:
-    #    file_db = flags.get('-f', None)
-    #    csvfiles = [opt[1] for opt in optlist if opt[0] == '-i']
-    #    if len(csvfiles) > 0:
-    #        if execscript:
-    #            # sqlcmd should be the script file name
-    #            results = query_csv_file(sqlcmd, csvfiles, file_db)
-    #        else:
-    #            results = query_csv(sqlcmd, csvfiles, file_db)
-    #    else:
-    #        print_help()
-    #        sys.exit(1)
-    write_output(results, vars(args).get('output', None))
+    ##outfile = flags.get('-o', None)
+    ##usefile = flags.get('-u', None)
+
+    ##execscript = '-s' in flags
+    ##sqlcmd = " ".join(arglist)
+
+    ##if usefile:
+    ##    if execscript:
+    ##        # sqlcmd should be the script file name
+    ##        results = query_sqlite_file(sqlcmd, usefile)
+    ##    else:
+    ##        results = query_sqlite(sqlcmd, usefile)
+    ##else:
+    ##    file_db = flags.get('-f', None)
+    ##    csvfiles = [opt[1] for opt in optlist if opt[0] == '-i']
+    ##    if len(csvfiles) > 0:
+    ##        if execscript:
+    ##            # sqlcmd should be the script file name
+    ##            results = query_csv_file(sqlcmd, csvfiles, file_db)
+    ##        else:
+    ##            results = query_csv(sqlcmd, csvfiles, file_db)
+    ##    else:
+    ##        print_help()
+    ##        sys.exit(1)
+    #write_output(results, vars(args).get('output', None))
 
 
 if __name__ == '__main__':
-    set_logging_config()
-    main()
+    csvsql_process_cml_args(sys.argv)

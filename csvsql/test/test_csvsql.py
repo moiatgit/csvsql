@@ -7,43 +7,6 @@ from csvsql import csvsql
 
 
 
-def test_get_statements_from_contents_when_theres_just_one():
-    contents = "SELECT * FROM mytable;"
-    expected = [ contents ]
-    result = csvsql.get_sql_statements_from_contents(contents)
-    assert result == expected
-
-
-def test_get_statements_from_contents_when_theres_just_one_and_requires_trimming():
-    statement = "SELECT * FROM mytable;"
-    contents = "     %s     "%statement
-    expected = [ statement ]
-    result = csvsql.get_sql_statements_from_contents(contents)
-    assert result == expected
-
-def test_get_statements_from_contents_when_multiple():
-    statements = [ "SELECT * FROM mytable;", "select col1 FROM mytable;", "select col1,col2 FROM mytable where col1=col2;" ]
-    contents = "\n".join(statements)
-    expected = statements
-    result = csvsql.get_sql_statements_from_contents(contents)
-    assert result == expected
-
-def test_get_statements_from_contents_ignoring_comments():
-    statements = [ "SELECT * FROM mytable;", "select col1 FROM mytable;", "select col1,col2 FROM mytable where col1=col2;" ]
-    contents = "-- SELECT * FROM anyothertable;\n" + "\n".join(statements[:-1]) + "    -- another comment to ignore\n" + statements[-1]
-    expected = statements
-    result = csvsql.get_sql_statements_from_contents(contents)
-    assert result == expected
-
-def test_get_statements_from_contents_ignoring_newlines_within():
-    statements = [ "SELECT *\nFROM mytable\n;", "select\ncol1 FROM mytable\n\n;", "select col1,\n\ncol2 FROM mytable where col1=\ncol2;" ]
-    statements_clean = [ s.replace('\n', ' ') for s in statements ]
-    contents = "-- SELECT * FROM anyothertable;\n" + "\n".join(statements[:-1]) + "    -- another comment to ignore\n" + statements[-1]
-    expected = statements_clean
-    result = csvsql.get_sql_statements_from_contents(contents)
-    assert result == expected
-
-
 def test_import_csv_basic_usage():
     headers = ['un', 'dos', 'tres' ]
     rows = [ ( '1', '2', '3' ), ( '4', '5', '6' ) ]
@@ -76,16 +39,12 @@ def test_import_csv_list(monkeypatch):
             'f2.csv': 'one,two,three\na,b,c\nd,e,f', 
             'f3.csv': 'un,dos,tres\na,2,3\nb,2,3'     
             }
-    def fake_open(self_):
-        """ returns a fileobject with the contents of self_.name """
-        return io.StringIO(files[self_.name])
-    monkeypatch.setattr(pathlib.Path, 'open', fake_open)
+    monkeypatch.setattr(pathlib.Path, 'open', lambda self_: io.StringIO(files[self_.name]))
     db = sqlite3.connect(':memory:')
     dialect = csv.excel
     csvsql.import_csv_list(db, files.keys())
     for filename in files.keys():
         assert_table_contains_csv_contents(db, filename[:-4], files[filename])
-
 
 
 def test_execute_statement_basic():
@@ -95,7 +54,6 @@ def test_execute_statement_basic():
     db.execute('insert into my_table values (3, 4)')
     statement = 'select * from my_table'
     results = csvsql.execute_statement(db, statement)
-    print("XXX results: %s"%results)
     assert results == [ ('un', 'dos'), (1, 2), (3, 4) ]
 
 
@@ -108,11 +66,13 @@ def test_execute_statements_basic():
             'select * from my_table'
             ]
     results = csvsql.execute_statements(db, statements)
-    print("XXX results: %s"%results)
     assert results == [ [], [], [], [ ('un', 'dos'), (1, 2), (3, 4) ] ]
 
 
+
 # Helping functions
+
+
 def assert_table_contains_csv_contents(db, table_name, csv_contents):
     """ given a sqlite3 table and a string with the csv contents, it checks whether there's a table in db
     named as table_name and containing the csv_contents (with the first row as headers) """

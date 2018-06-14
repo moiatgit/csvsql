@@ -8,11 +8,14 @@ Currently:
   return the results of executing a list of statments
 
   Currently checking querycsv.main()
+  Moving any contents from querycsv to csvsqlcli. Mostly unchecked!
 
 
 Enhancements
 
 - add options to clean up the csv data:
+  - check for robustness: e.g. what happens when the statements are not valid sql statements, or the
+    db or csv are not actually the expected type of files.
   - headed columns only
   - non headed columns named as COLn
   - define column id (by pos or head name) and filter any row without value there
