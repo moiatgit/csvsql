@@ -45,3 +45,9 @@ def test_get_statements_from_contents_ignoring_newlines_within():
     result = csvsqlcli.get_sql_statements_from_contents(contents)
     assert result == expected
 
+
+def test_pretty_format_on_empty_results():
+    results = []
+    formated_fs = csvsqlcli.pretty_format(results)
+    assert formated_fs.read() == ''
+    assert False, 'achtung: value returned by pretty_format() doesn''t allow read()'

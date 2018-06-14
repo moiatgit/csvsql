@@ -1,14 +1,7 @@
 Currently:
 
-- now import_csv() basic is done, it's time to check import_csv_list() and then bak to main()
-
-  (done) Current problem: check table contents (see assert False on test_csvsql.py)
-
-  (done) currently developing test_execute_statements_basic() to dev execute_statements() method that should
-  return the results of executing a list of statments
-
-  Currently checking querycsv.main()
-  Moving any contents from querycsv to csvsqlcli. Mostly unchecked!
+Currently checking querycsv.main()
+- Moving any contents from querycsv to csvsqlcli. Mostly unchecked!
 
 
 Enhancements

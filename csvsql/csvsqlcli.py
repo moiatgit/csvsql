@@ -25,6 +25,7 @@ import argparse
 import pathlib
 import re
 import itertools
+import io
 
 import csvsql
 
@@ -172,11 +173,21 @@ def write_output(results, filename=None):
     else:
         pretty_print(results, sys.stdout)
 
+
+def pretty_format(rows, fs=None):
+    """ Composes a stream with the information in rows and writes it out to fs.
+        In case fs is not provided, it creates one
+        Finally it returns the stream
+    """
+    fs = fs if fs else io.StringIO()
+    fs.write('jo')
+    return fs
+
 def pretty_print(rows, fp):
     """ This method writes the csv results to the standard output """
     # XXX TODO: consider generating a string to ease testing
-    headers = rows.pop(0)
-    rows = [[unicode(col) for col in row] for row in rows]
+    headers = rows[0]
+    rows = [[unicode(col) for col in row] for row in rows[1:]]
 
     rcols = range(len(headers))
 
