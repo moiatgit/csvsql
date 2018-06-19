@@ -25,11 +25,14 @@ import argparse
 import pathlib
 import re
 import itertools
+import io
+import tempfile
 
 import csvsql
 
 # Current version of this cli
 _VERSION = "0.1.0"
+
 
 def csvsql_process_cml_args(clargs):
     """ This method interprets the commandline arguments in clargs (typically the contents of sys.args) and
@@ -43,6 +46,7 @@ def csvsql_process_cml_args(clargs):
     results = csvsql.execute_statements(db, statements)[-1] # just results for the last statement
     destination = args.get('output', None)
     write_output(results, destination )
+
 
 def get_args(clargs):
     """ processes the arguments in clargs and returns a dictionary with the parsed arguments.
@@ -70,6 +74,7 @@ def get_args(clargs):
     args = p.parse_args(clargs[1:])
     return vars(args)
 
+
 def assert_valid_args(args):
     """ Asserts the processed arguments are valid
 
@@ -93,16 +98,17 @@ def assert_valid_args(args):
             print_error_and_exit("Either --query or --script options must be specified")
         assert_file_exists(args['script'])
 
+
 def assert_file_exists(path):
     """ Asserts path is an existing file. Otherwise, displays an error and stops execution """
     if not pathlib.Path(path).is_file():
         print_error_and_exit("File %s not found"%path)
 
+
 def assert_file_does_not_exist(path):
     """ Asserts path is a non existing file. Otherwise, displays an error and stops execution """
     if pathlib.Path(path).is_file():
         print_error_and_exit("File %s already exists."%path)
-
 
 
 def get_statements(args):
@@ -124,6 +130,7 @@ def get_statements(args):
     if statements:
         return statements
     print_error_and_exit("Not proper SQL statement has been specified")
+
 
 def get_sql_statements_from_contents(contents):
     """ returns a list of SQL statements found in contents
@@ -148,6 +155,7 @@ def get_sql_statements_from_file(path):
     statements = get_sql_statements_from_contents(contents)
     return statements[-1] if statements else None
 
+
 def get_db(args):
     """ given the arguments already validated, it returns the db connection containing all the data """
     if 'use' in args:
@@ -156,50 +164,18 @@ def get_db(args):
     csvsql.import_csv_list(db, args['input'])
     return db
 
-def write_output(results, filename=None):
+
+def write_output(results, destination=None, dialect=csv.excel):
     """ Writes results to output file.
 
         results: is a list of csv rows
-        filename: is the path to a file where the results will be stored.
-
-        It is assumed the file doesn't exist.
-        If filename is not specified, the standard output is assumed.
+        destination: is the name of the file where to store the results. When None, standard output
+        is assumed
     """
-    if filename:
-        with open(filename, 'wb') as fp:
-            csvout = csv.writer(fp, quoting=csv.QUOTE_NONNUMERIC)
-            csvout.writerows(results)
-    else:
-        pretty_print(results, sys.stdout)
-
-def pretty_print(rows, fp):
-    """ This method writes the csv results to the standard output """
-    # XXX TODO: consider generating a string to ease testing
-    headers = rows.pop(0)
-    rows = [[unicode(col) for col in row] for row in rows]
-
-    rcols = range(len(headers))
-
-    colwidth = [max(0, len(headers[i])) for i in xrange(len(headers))]
-    for y in xrange(len(rows)):
-        for x in xrange(len(headers)):
-            colwidth[x] = max(colwidth[x], len(rows[y][x]))
-
-    # Header
-    fp.write(' ' + ' | '.join([unicode(headers[i]).ljust(colwidth[i])
-                               for i in rcols]) + '\n')
-
-    # Seperator
-    num_dashes = sum(colwidth) + 3 * len(headers) - 1
-    fp.write('=' * num_dashes + '\n')
-
-    # Rows
-    for row in rows:
-        fp.write(' ' + ' | '.join([row[i].ljust(colwidth[i])
-                                   for i in rcols]) + '\n')
-
-    if len(rows) == 0:
-        fp.write('No results\n')
+    fs = open(destination, 'w') if destination else sys.out
+    csv.writer(fs, dialect=dialect).writerows(results)
+    if destination:
+        fs.close()
 
 
 def print_error_and_exit(msg):

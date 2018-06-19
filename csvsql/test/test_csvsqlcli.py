@@ -45,3 +45,6 @@ def test_get_statements_from_contents_ignoring_newlines_within():
     result = csvsqlcli.get_sql_statements_from_contents(contents)
     assert result == expected
 
+
+def test_csvsql_process_cml_args():
+    assert False, 'Time to test command line arguments. You might want to simulate a whole FS'

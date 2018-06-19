@@ -3,8 +3,8 @@ Currently
 
 - now import_csv() basic is done, it's time to check import_csv_list() and then bak to main()
 
-  Currently checking querycsv.main()
-  Moving any contents from querycsv to csvsqlcli. Mostly unchecked!
+Currently checking querycsv.main()
+- Moving any contents from querycsv to csvsqlcli. Mostly unchecked!
 
 ToDo
 ====
