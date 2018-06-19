@@ -27,6 +27,7 @@ import re
 import itertools
 import io
 import tempfile
+import csv
 
 import csvsql
 
@@ -45,7 +46,7 @@ def csvsql_process_cml_args(clargs):
     db = get_db(args)
     results = csvsql.execute_statements(db, statements)[-1] # just results for the last statement
     destination = args.get('output', None)
-    write_output(results, destination )
+    write_output(results, destination)
 
 
 def get_args(clargs):

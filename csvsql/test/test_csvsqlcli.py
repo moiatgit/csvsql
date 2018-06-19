@@ -46,5 +46,14 @@ def test_get_statements_from_contents_ignoring_newlines_within():
     assert result == expected
 
 
-def test_csvsql_process_cml_args():
-    assert False, 'Time to test command line arguments. You might want to simulate a whole FS'
+def test_csvsql_process_cml_args_no_args_provided(capsys):
+    clargs = [ 'csvsqlcli.py' ]
+    with pytest.raises(SystemExit):
+        csvsqlcli.csvsql_process_cml_args(clargs)
+
+def test_csvsql_process_cml_args_simple_query(capsys):
+    clargs = [ 'csvsqlcli.py' ]
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    captured = capsys.readouterr()
+    assert False, 'see https://docs.pytest.org/en/latest/capture.html'
+
