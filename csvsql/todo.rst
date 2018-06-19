@@ -1,17 +1,32 @@
-Currently:
+Currently
+=========
 
 - now import_csv() basic is done, it's time to check import_csv_list() and then bak to main()
-
-  (done) Current problem: check table contents (see assert False on test_csvsql.py)
-
-  (done) currently developing test_execute_statements_basic() to dev execute_statements() method that should
-  return the results of executing a list of statments
 
   Currently checking querycsv.main()
   Moving any contents from querycsv to csvsqlcli. Mostly unchecked!
 
+ToDo
+====
+
+- test csvsqlcli
+
+- test packaging
+
+- create a new repo at github and push this
+
+  Don't forget to thank original author!
+
+
 
 Enhancements
+============
+
+- some optimizations:
+
+  - if you keep the results of each statement just to show the last one, you might be keeping a lot
+    of data in memory for nothing! In fact, just the last statement could simply be too much for big
+    csv! Find a way to keep so much data from memory
 
 - add options to clean up the csv data:
   - check for robustness: e.g. what happens when the statements are not valid sql statements, or the
