@@ -28,6 +28,7 @@ import itertools
 import io
 import tempfile
 import csv
+import sqlite3
 
 import csvsql
 
@@ -47,6 +48,7 @@ def csvsql_process_cml_args(clargs):
     results = csvsql.execute_statements(db, statements)[-1] # just results for the last statement
     destination = args.get('output', None)
     write_output(results, destination)
+    db.close()
 
 
 def get_args(clargs):
@@ -83,25 +85,27 @@ def assert_valid_args(args):
 
         In case the combination of arguments is not vàlid, it shows a message and stops execution.
     """
-    if 'use' in args:
+    print("XXX assert_valid_args() args: %s"%args)
+    if args.get('use', None):
         assert_file_exists(args['use'])
     else:
-        if 'input' not in args:
+        if not args.get('input', None):
             print_error_and_exit("Either --input or --use must be defined")
         for path in args['input']:
             assert_file_exists(path)
-        if 'db' in args:
+        if args.get('db', None):
             assert_file_exists(args['db'])
-    if 'output' in args:
+    if args.get('output', None):
         assert_file_does_not_exist(args['output'])
-    if 'query' not in args:
-        if 'script' not in args:
-            print_error_and_exit("Either --query or --script options must be specified")
+    if not args.get('query', None):
+        if args.get('script', None):
+            print_error_and_exit("Either query or --script options must be specified")
         assert_file_exists(args['script'])
 
 
 def assert_file_exists(path):
     """ Asserts path is an existing file. Otherwise, displays an error and stops execution """
+    print("XXX assert_file_exists(path: %s)"%path)
     if not pathlib.Path(path).is_file():
         print_error_and_exit("File %s not found"%path)
 
@@ -124,7 +128,7 @@ def get_statements(args):
         Note: this method doesn't check for sintactically nor semantically valid SQL statements. It
         will accept as a "valid" statement any string starting with a non whitespace and ended by ';' 
     """
-    if 'query' in args:
+    if args.get('query', None):
         statements = get_sql_statements_from_contents(args['query'])
     else:
         statements = get_sql_statements_from_file(args['script'])
@@ -148,6 +152,15 @@ def get_sql_statements_from_contents(contents):
     return [ s.strip() for s in itertools.chain.from_iterable(sentences_from_newline) if len(s.strip())>0 ]
 
 
+def query_sqlite(sqlcmd, sqlfilename=None):
+    """
+    Run a SQL command on a sqlite database in the specified file
+    (or in memory if sqlfilename is None).
+    """
+    database = sqlfilename if sqlfilename else ':memory:'
+    with as_connection(database) as conn:
+        return execute_sql(conn, as_list(sqlcmd))
+
 def get_sql_statements_from_file(path):
     """ returns the last SELECT statement from the specified file in path.
         In case there's not such a statement, it returns None
@@ -159,9 +172,13 @@ def get_sql_statements_from_file(path):
 
 def get_db(args):
     """ given the arguments already validated, it returns the db connection containing all the data """
-    if 'use' in args:
-         return open_db(args['use'])
-    db = open_db(args.get('db', None))
+    if args.get('use', None):
+         db_name = args['use']
+    else:
+         db_name = args.get('db', None)
+         if not db_name:
+             db_name = ':memory:'
+    db = sqlite3.connect(db_name)
     csvsql.import_csv_list(db, args['input'])
     return db
 

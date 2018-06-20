@@ -51,9 +51,14 @@ def test_csvsql_process_cml_args_no_args_provided(capsys):
     with pytest.raises(SystemExit):
         csvsqlcli.csvsql_process_cml_args(clargs)
 
-def test_csvsql_process_cml_args_simple_query(capsys):
-    clargs = [ 'csvsqlcli.py' ]
+def test_csvsql_process_cml_args_simple_query(capsys, tmpdir):
+    contents = 'one,two,three\n1,2,3\n4,5,6'
+    fd = tmpdir.mkdir('subdir').join('myfile.csv')
+    fd.write(contents)
+    print("XXX fd.realpath '%s'"%(str(fd.realpath())))
+    clargs = [ 'csvsqlcli.py', '-i', str(fd.realpath()), 'select one from myfile;' ]
+    expected_output = 'one\n1\n4'
     csvsqlcli.csvsql_process_cml_args(clargs)
     captured = capsys.readouterr()
-    assert False, 'see https://docs.pytest.org/en/latest/capture.html'
+    assert captured.out == expected_output
 
