@@ -1,15 +1,40 @@
 Currently
 =========
 
-- now import_csv() basic is done, it's time to check import_csv_list() and then bak to main()
-
 Currently checking querycsv.main()
-- Moving any contents from querycsv to csvsqlcli. Mostly unchecked!
+- (done) current problem: test_csvsql_process_cml_args_when_non_existing_output_file
+  The output is different when writen to stdout than on a file. \r\n
+- (done) test_csvsql_process_cml_args_when_output_already_exists_and_not_forced 
+  Problem: it seems pathlib is unable to find the existing file
+
 
 ToDo
 ====
 
+- consider if it has sense to use options 'use' and 'db'. Maybe it is enough with 'db' since both
+  allow the use of a single sqlite db and it can be modified by the statements to execute
+  Then, the validations would change: if 'db' doesn't already exist, at least one --input should be
+  defined.
+  That also could be reconsidered, since there could be statements not requiring data!
+  So, --db could be replaced by --use and none --use nor --input should be required. Just the
+  statements. Statements will fail when accessing to unnexisting tables, just as it does when that
+  happens with tables not included in the --use or --input!
+
+  Then, --db could be used to define the path of a folder containing a bunch of csv. BUT, it can be
+  implemented by --input allowing multiple filenames (e.g. --input \*.csv ) and in a future, by
+  allowing specification of the data by a .json-like file
+
 - test csvsqlcli
+
+  - case intermediate storage '-f' o '--db'
+
+  - case more than one 'input'¡
+
+  - case 'use' and ('input' or 'db')
+
+  - case 'use'
+
+  - case 'db'
 
 - test packaging
 

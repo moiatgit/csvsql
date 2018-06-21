@@ -34,7 +34,6 @@ def import_csv(db, contents_fileobject, table_name, dialect=csv.excel):
         return source_column_name if source_column_name else default_column_name%column_counter
 
     colstr = ','.join( normalize_column_name(col) for col in source_headers )
-    print("XXX colstr: %s"%colstr)
     db.execute('drop table if exists %s;' % table_name)
     db.execute('create table %s (%s);' % (table_name, colstr))
     for row in reader:

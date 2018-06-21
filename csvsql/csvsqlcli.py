@@ -30,7 +30,7 @@ import tempfile
 import csv
 import sqlite3
 
-import csvsql
+from csvsql import csvsql
 
 # Current version of this cli
 _VERSION = "0.1.0"
@@ -64,9 +64,10 @@ def get_args(clargs):
             action="append", 
             help="Input csv filename. Multiple -i options can be used to specify more than one input file")
     p.add_argument("-u", "--use",
-            help="Use the specified sqlite file for input. Options -i and -f are ignored when -u is specified.")
+            help="Use the specified sqlite file for input. Options -i and --db are ignored when -u is specified.")
     p.add_argument("-o", "--output",
-            help="Send output to this csv file. The file must not exist unleast -f is specified.")
+            help="Send output to this csv file. The file must not exist unleast --force is specified.")
+    p.add_argument("--force", default=False, action='store_false')
     p.add_argument("-s", "--script",
             help="Execute a SQL script from the given file. If -q is provided, this one is ignored."
               "Only the last SELECT command in the file will be processed.")
@@ -85,7 +86,6 @@ def assert_valid_args(args):
 
         In case the combination of arguments is not vàlid, it shows a message and stops execution.
     """
-    print("XXX assert_valid_args() args: %s"%args)
     if args.get('use', None):
         assert_file_exists(args['use'])
     else:
@@ -96,7 +96,9 @@ def assert_valid_args(args):
         if args.get('db', None):
             assert_file_exists(args['db'])
     if args.get('output', None):
-        assert_file_does_not_exist(args['output'])
+        if pathlib.Path(args['output']).is_file() and not args['force']:
+            print_error_and_exit("File %s already exists. Remove it or use --force option"%args['output'])
+
     if not args.get('query', None):
         if args.get('script', None):
             print_error_and_exit("Either query or --script options must be specified")
@@ -105,15 +107,8 @@ def assert_valid_args(args):
 
 def assert_file_exists(path):
     """ Asserts path is an existing file. Otherwise, displays an error and stops execution """
-    print("XXX assert_file_exists(path: %s)"%path)
     if not pathlib.Path(path).is_file():
         print_error_and_exit("File %s not found"%path)
-
-
-def assert_file_does_not_exist(path):
-    """ Asserts path is a non existing file. Otherwise, displays an error and stops execution """
-    if pathlib.Path(path).is_file():
-        print_error_and_exit("File %s already exists."%path)
 
 
 def get_statements(args):
@@ -190,7 +185,7 @@ def write_output(results, destination=None, dialect=csv.excel):
         destination: is the name of the file where to store the results. When None, standard output
         is assumed
     """
-    fs = open(destination, 'w') if destination else sys.out
+    fs = open(destination, 'w') if destination else sys.stdout
     csv.writer(fs, dialect=dialect).writerows(results)
     if destination:
         fs.close()

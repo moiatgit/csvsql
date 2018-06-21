@@ -1,4 +1,5 @@
 import pytest
+import os
 import io
 import sqlite3
 import csv
@@ -55,10 +56,59 @@ def test_csvsql_process_cml_args_simple_query(capsys, tmpdir):
     contents = 'one,two,three\n1,2,3\n4,5,6'
     fd = tmpdir.mkdir('subdir').join('myfile.csv')
     fd.write(contents)
-    print("XXX fd.realpath '%s'"%(str(fd.realpath())))
     clargs = [ 'csvsqlcli.py', '-i', str(fd.realpath()), 'select one from myfile;' ]
-    expected_output = 'one\n1\n4'
+    #expected_output = 'one\r\n1\r\n4\r\n'
+    expected_output = 'one\n1\n4\n'
     csvsqlcli.csvsql_process_cml_args(clargs)
     captured = capsys.readouterr()
-    assert captured.out == expected_output
+    assert captured[0].replace('\r','') == expected_output
+    assert captured[1] == ''
+
+def test_csvsql_process_cml_args_when_non_existing_output_file(capsys, tmpdir):
+    contents = 'one,two,three\n1,2,3\n4,5,6'
+    mysubdir = tmpdir.mkdir('subdir')
+    fd = mysubdir.join('myfile.csv')
+    fd.write(contents)
+    output_file_path = pathlib.Path(str(mysubdir.realpath())) / 'outputfile.csv'
+    clargs = [ 'csvsqlcli.py', '-i', str(fd.realpath()), 
+                               '-o', str(output_file_path),
+                               'select one from myfile;' ]
+    expected_output = 'one\n1\n4\n'
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    assert output_file_path.read_text() == expected_output
+    captured = capsys.readouterr()
+    assert captured[0] == ''
+    assert captured[1] == ''
+
+def test_csvsql_process_cml_args_when_output_already_exists_and_forced(capsys, tmpdir):
+    contents = 'one,two,three\n1,2,3\n4,5,6'
+    mysubdir = tmpdir.mkdir('subdir')
+    fin = mysubdir.join('myfile.csv')
+    fout = mysubdir.join('outputfile.csv')
+    fin.write(contents)
+    output_file_path = pathlib.Path(str(mysubdir.realpath())) / 'outputfile.csv'
+    clargs = [ 'csvsqlcli.py', '-i', str(fin.realpath()), 
+                               '-o', str(output_file_path),
+                               '--force',
+                               'select one from myfile;' ]
+    expected_output = 'one\n1\n4\n'
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    assert output_file_path.read_text() == expected_output
+    captured = capsys.readouterr()
+    assert captured[0] == ''
+    assert captured[1] == ''
+
+def test_csvsql_process_cml_args_when_output_already_exists_and_not_forced(capsys, tmpdir):
+    contents = 'one,two,three\n1,2,3\n4,5,6'
+    mysubdir = tmpdir.mkdir('subdir')
+    fin = mysubdir.join('myfile.csv')
+    fout = mysubdir.join('outputfile.csv')
+    fin.write(contents)
+    fout.write("anything")
+    clargs = [ 'csvsqlcli.py', '-i', str(fin.realpath()), '-o', str(fout.realpath()), 'select one from myfile;' ]
+    with pytest.raises(SystemExit):
+        csvsqlcli.csvsql_process_cml_args(clargs)
+    captured = capsys.readouterr()
+    assert captured[0] == ''
+    assert captured[1] != ''
 
