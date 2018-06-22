@@ -30,7 +30,7 @@ import tempfile
 import csv
 import sqlite3
 
-from csvsql import csvsql
+import csvsql
 
 # Current version of this cli
 _VERSION = "0.1.0"
@@ -63,17 +63,15 @@ def get_args(clargs):
     p.add_argument("-i", "--input",
             action="append", 
             help="Input csv filename. Multiple -i options can be used to specify more than one input file")
-    p.add_argument("-u", "--use",
-            help="Use the specified sqlite file for input. Options -i and --db are ignored when -u is specified.")
+    p.add_argument("-d", "--database",
+            help="Use the specified sqlite file as intermediate storage. If the file does not exist, it will be created.")
     p.add_argument("-o", "--output",
             help="Send output to this csv file. The file must not exist unleast --force is specified.")
     p.add_argument("--force", default=False, action='store_false')
     p.add_argument("-s", "--script",
             help="Execute a SQL script from the given file. If -q is provided, this one is ignored."
               "Only the last SELECT command in the file will be processed.")
-    p.add_argument("--db",
-            help="Use a sqlite file for intermediate storage. If the file does not exist, it will be created.")
-    p.add_argument("query", help="SQL query. i.e. the SELECT statement. If not specified, --script must be provided.")
+    p.add_argument("statement", help="SQL statement. i.e. the SELECT statement. If not specified, --script must be provided.")
     p.add_argument('-V', '--version', action='version', version='%s %s'%(program_name, _VERSION))
     args = p.parse_args(clargs[1:])
     return vars(args)
@@ -99,9 +97,9 @@ def assert_valid_args(args):
         if pathlib.Path(args['output']).is_file() and not args['force']:
             print_error_and_exit("File %s already exists. Remove it or use --force option"%args['output'])
 
-    if not args.get('query', None):
+    if not args.get('statement', None):
         if args.get('script', None):
-            print_error_and_exit("Either query or --script options must be specified")
+            print_error_and_exit("Either statement or --script options must be specified")
         assert_file_exists(args['script'])
 
 
@@ -116,15 +114,15 @@ def get_statements(args):
 
         args: a dictionary containing arguments and values.
 
-        The statements can be defined in 'query' or in 'script' keys of args.
+        The statements can be defined in 'statement' or in 'script' keys of args.
 
         In case, there are no statements it displays an error and stops execution.
 
         Note: this method doesn't check for sintactically nor semantically valid SQL statements. It
         will accept as a "valid" statement any string starting with a non whitespace and ended by ';' 
     """
-    if args.get('query', None):
-        statements = get_sql_statements_from_contents(args['query'])
+    if args.get('statement', None):
+        statements = get_sql_statements_from_contents(args['statement'])
     else:
         statements = get_sql_statements_from_file(args['script'])
     if statements:

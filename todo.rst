@@ -1,15 +1,18 @@
 Currently
 =========
 
-Currently checking querycsv.main()
-- (done) current problem: test_csvsql_process_cml_args_when_non_existing_output_file
-  The output is different when writen to stdout than on a file. \r\n
-- (done) test_csvsql_process_cml_args_when_output_already_exists_and_not_forced 
-  Problem: it seems pathlib is unable to find the existing file
+- problem: import csvsql seems to work differently when executing from pytest than directly from
+  python
+  There's a clear problem with __init__.py
+
 
 
 ToDo
 ====
+
+- define package
+
+  following https://packaging.python.org/tutorials/packaging-projects/
 
 - consider if it has sense to use options 'use' and 'db'. Maybe it is enough with 'db' since both
   allow the use of a single sqlite db and it can be modified by the statements to execute
@@ -38,7 +41,11 @@ ToDo
 
 - test packaging
 
-- create a new repo at github and push this
+- edit readme.md
+
+- (done) create a new repo at github and 
+  
+- push csvsql to github
 
   Don't forget to thank original author!
 

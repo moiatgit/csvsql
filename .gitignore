@@ -4,3 +4,6 @@
 .pytest_cache/
 __pycache__/
 .cache/
+build/
+csvsql.egg-info/
+dist/
