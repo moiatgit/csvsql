@@ -84,15 +84,13 @@ def assert_valid_args(args):
 
         In case the combination of arguments is not vàlid, it shows a message and stops execution.
     """
-    if args.get('use', None):
-        assert_file_exists(args['use'])
-    else:
-        if not args.get('input', None):
-            print_error_and_exit("Either --input or --use must be defined")
+    if args.get('database', None):
+        assert_file_exists(args['database'])
+
+    if args.get('input', None):
         for path in args['input']:
             assert_file_exists(path)
-        if args.get('db', None):
-            assert_file_exists(args['db'])
+
     if args.get('output', None):
         if pathlib.Path(args['output']).is_file() and not args['force']:
             print_error_and_exit("File %s already exists. Remove it or use --force option"%args['output'])
@@ -165,14 +163,13 @@ def get_sql_statements_from_file(path):
 
 def get_db(args):
     """ given the arguments already validated, it returns the db connection containing all the data """
-    if args.get('use', None):
-         db_name = args['use']
+    if args.get('database', None):
+         db_name = args['database']
     else:
-         db_name = args.get('db', None)
-         if not db_name:
-             db_name = ':memory:'
+         db_name = ':memory:'
     db = sqlite3.connect(db_name)
-    csvsql.import_csv_list(db, args['input'])
+    if args.get('input', None):
+        csvsql.import_csv_list(db, args['input'])
     return db
 
 

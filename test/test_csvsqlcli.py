@@ -112,3 +112,18 @@ def test_csvsql_process_cml_args_when_output_already_exists_and_not_forced(capsy
     assert captured[0] == ''
     assert captured[1] != ''
 
+def test_csvsql_process_cml_args_when_no_input_file(capsys):
+    clargs = [ 'csvsqlcli.py', 'select tbl_name from sqlite_master;' ]
+    expected_output = 'tbl_name\n'
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    captured = capsys.readouterr()
+    assert captured[0].replace('\r','') == expected_output
+    assert captured[1] == ''
+
+def test_csvsql_process_cml_args_when_statement_error(capsys):
+    clargs = [ 'csvsqlcli.py', 'select foo from bar;' ]
+    expected_output = 'tbl_name\n'
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    captured = capsys.readouterr()
+    assert captured[0].replace('\r','') == expected_output
+    assert captured[1] == ''
