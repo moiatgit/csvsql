@@ -3,7 +3,7 @@ import io
 import sqlite3
 import csv
 import pathlib
-from csvsql import csvsql
+import csvsql
 
 
 

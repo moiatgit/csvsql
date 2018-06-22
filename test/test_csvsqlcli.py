@@ -4,7 +4,7 @@ import io
 import sqlite3
 import csv
 import pathlib
-from csvsql import csvsqlcli
+import csvsqlcli
 
 
 def test_get_statements_from_contents_when_theres_just_one():

@@ -1,7 +1,7 @@
 Currently
 =========
 
-- problem: import csvsql seems to work differently when executing from pytest than directly from
+- (done) problem: import csvsql seems to work differently when executing from pytest than directly from
   python
   There's a clear problem with __init__.py
 
@@ -9,10 +9,6 @@ Currently
 
 ToDo
 ====
-
-- define package
-
-  following https://packaging.python.org/tutorials/packaging-projects/
 
 - consider if it has sense to use options 'use' and 'db'. Maybe it is enough with 'db' since both
   allow the use of a single sqlite db and it can be modified by the statements to execute
@@ -38,6 +34,14 @@ ToDo
   - case 'use'
 
   - case 'db'
+
+
+- define package
+
+  following https://packaging.python.org/tutorials/packaging-projects/
+
+  $ python3 setup.py sdist bdist_wheel
+  $ pip install -e .
 
 - test packaging
 

@@ -5,7 +5,7 @@ with open("README.md") as fh:
 
 setuptools.setup(
         name = "csvsql",
-        version = "0.0.1",
+        version = "1.0.0",
         author = "Moisès Gómez Girón",
         author_email = "moiatgit@gmail.com",
         description = "API to allow execution of SQL statements on csv files",

@@ -33,7 +33,7 @@ import sqlite3
 import csvsql
 
 # Current version of this cli
-_VERSION = "0.1.0"
+_VERSION = "1.0.0"
 
 
 def csvsql_process_cml_args(clargs):
