@@ -35,6 +35,33 @@ import csvsql
 # Current version of this cli
 _VERSION = "1.0.0"
 
+class ExtendAction(argparse.Action):
+    """ This class defines an action, similar to 'append' that allows argparse to collect multiple
+    args for the same option in a flat list. i.e.
+
+    "-i one two -i three" would generate with 'append' the list [['one', 'two'], ['three']]
+    'ExtendAction will return ['one', 'two', 'three'] instead
+
+    Note: solution found at https://stackoverflow.com/questions/41152799/argparse-flatten-the-result-of-action-append
+    """
+    def __call__(self, parser, namespace, values, option_string=None):
+        items = getattr(namespace, self.dest) or []
+        items.extend(values)
+        setattr(namespace, self.dest, items)
+
+class ExtendActionUnique(argparse.Action):
+    """ This class defines an action, similar to ExtendAction but removing repeated input. It
+    preserves the original order.
+
+    "-i one two one -i two three -i three four" would generate [ 'one', 'two', 'three', 'four' ]
+
+    """
+    def __call__(self, parser, namespace, values, option_string=None):
+        items = getattr(namespace, self.dest) or []
+        items.extend(v for v in values if v not in items)
+        setattr(namespace, self.dest, items)
+
+
 
 def csvsql_process_cml_args(clargs):
     """ This method interprets the commandline arguments in clargs (typically the contents of sys.args) and
@@ -63,26 +90,34 @@ def get_args(clargs):
 
     program_name = clargs[0]
     p = argparse.ArgumentParser(prog=program_name, description="This program allows the execution of SQL on csv files")
-    p.add_argument('--version', action='version', version='%s %s'%(program_name, _VERSION))
+    p.register('action', 'extend', ExtendAction)
+    p.register('action', 'extend_unique', ExtendActionUnique)
+    p.add_argument('-v', '--version', action='version', version='%s version %s'%(program_name, _VERSION))
     p.add_argument("-d", "--database",
             help="Use the specified sqlite file as intermediate storage. If the file does not exist, it will be created.")
     p.add_argument("-i", "--input",
-            action="append", 
+            action="extend_unique", 
             nargs='+',
-            help="Input csv filename. Multiple -i options can be used to specify more than one input file")
+            help="Input csv filename. Multiple -i options can be used to specify more than one input file."
+                 "Duplications will be ignored.")
     p.add_argument("-o", "--output",
             help="Send output to this csv file. The file must not exist unleast --force is specified.")
     p.add_argument("--force", default=False, action='store_false')
     p.add_argument("-f", "--file",
-            help="Execute a SQL script from the given file. If -q is provided, this one is ignored."
-              "Only the last SELECT command in the file will be processed.")
+            action = "extend",
+            nargs='+',
+            help="Execute SQL statements stored in the given file. Multiple -f options can be used to "
+                 "specify more than one statement sources. Each statement will be executed sequentially in the "
+                 "specified order. Statements specified with -s will be executed before -f ones.")
     p.add_argument("-s", "--statement",
-            action = "append",
-            help="Execute one or more SQL statements. If not specified, --file must be provided.",
+            action = "extend",
+            help="Execute one or more SQL statements. Multiple -s options can be used to specify "
+                 "more than one statement. They can also be specified separated by ';'. Statements "
+                 "specified with -f option, will be executed after -s ones.",
             nargs='+')
     args = p.parse_args(clargs[1:])
     vargs = vars(args)
-    vargs['input'] = flatten_list(XXX now you have to flatten the list to [] if None. Consider 'unique' option for input but not for statement. Then you'll have to retest all cli since the api has changed
+    #vargs['input'] = flatten_list(XXX now you have to flatten the list to [] if None. Consider 'unique' option for input but not for statement. Then you'll have to retest all cli since the api has changed
     print('XXX', vargs)
     sys.exit(1)
     return vargs
