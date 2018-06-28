@@ -37,10 +37,8 @@ def import_csv(db, contents_fileobject, table_name, dialect=csv.excel):
     db.execute('drop table if exists %s;' % table_name)
     db.execute('create table %s (%s);' % (table_name, colstr))
     for row in reader:
-        print("XXX considering row", row)
         params = ','.join('?' for i in range(len(row)))
         sql = 'insert into %s values (%s);' % (table_name, params)
-        print("XXX sql: ", sql)
         db.execute(sql, row)
     db.commit()
 

@@ -1,7 +1,7 @@
 Currently
 =========
 
-on test test_csvsql_process_cml_args_when_multiple_entries_on_same_input_option()
+(done) on test test_csvsql_process_cml_args_when_multiple_entries_on_same_input_option()
     Problem: -i un.csv dos.csv -i tres.csv 'select * from un' is unable to
     find out the statement. It would require to add some mark to indicate
     the actual query. Another possibility is to consider it as the last
@@ -13,7 +13,7 @@ on test test_csvsql_process_cml_args_when_multiple_entries_on_same_input_option(
 ToDo
 ====
 
-- consider if it has sense to use options 'use' and 'db'. Maybe it is enough with 'db' since both
+- (done) consider if it has sense to use options 'use' and 'db'. Maybe it is enough with 'db' since both
   allow the use of a single sqlite db and it can be modified by the statements to execute
   Then, the validations would change: if 'db' doesn't already exist, at least one --input should be
   defined.
@@ -30,15 +30,19 @@ ToDo
 
 - test csvsqlcli
 
+  - case multiple statements in -s
+
+  - case multiple files in -f
+
+  - case multiple inputs in -i
+
+  - grat order in -s then -f statements
+
   - case csv is not sound (e.g. some rows have extra or fewer columns),
 
   - case intermediate storage '-f' o '--db'
 
   - case more than one 'input'¡
-
-  - case 'use' and ('input' or 'db')
-
-  - case 'use'
 
   - case 'db'
 

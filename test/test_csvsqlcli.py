@@ -56,8 +56,7 @@ def test_csvsql_process_cml_args_simple_query(capsys, tmpdir):
     contents = 'one,two,three\n1,2,3\n4,5,6'
     fd = tmpdir.mkdir('subdir').join('myfile.csv')
     fd.write(contents)
-    clargs = [ 'csvsqlcli.py', '-i', str(fd.realpath()), 'select one from myfile;' ]
-    #expected_output = 'one\r\n1\r\n4\r\n'
+    clargs = [ 'csvsqlcli.py', '-i', str(fd.realpath()), '-s', 'select one from myfile;' ]
     expected_output = 'one\n1\n4\n'
     csvsqlcli.csvsql_process_cml_args(clargs)
     captured = capsys.readouterr()
@@ -72,7 +71,7 @@ def test_csvsql_process_cml_args_when_non_existing_output_file(capsys, tmpdir):
     output_file_path = pathlib.Path(str(mysubdir.realpath())) / 'outputfile.csv'
     clargs = [ 'csvsqlcli.py', '-i', str(fd.realpath()), 
                                '-o', str(output_file_path),
-                               'select one from myfile;' ]
+                               '-s', 'select one from myfile;' ]
     expected_output = 'one\n1\n4\n'
     csvsqlcli.csvsql_process_cml_args(clargs)
     assert output_file_path.read_text() == expected_output
@@ -90,7 +89,7 @@ def test_csvsql_process_cml_args_when_output_already_exists_and_forced(capsys, t
     clargs = [ 'csvsqlcli.py', '-i', str(fin.realpath()), 
                                '-o', str(output_file_path),
                                '--force',
-                               'select one from myfile;' ]
+                               '-s', 'select one from myfile;' ]
     expected_output = 'one\n1\n4\n'
     csvsqlcli.csvsql_process_cml_args(clargs)
     assert output_file_path.read_text() == expected_output
@@ -105,7 +104,10 @@ def test_csvsql_process_cml_args_when_output_already_exists_and_not_forced(capsy
     fout = mysubdir.join('outputfile.csv')
     fin.write(contents)
     fout.write("anything")
-    clargs = [ 'csvsqlcli.py', '-i', str(fin.realpath()), '-o', str(fout.realpath()), 'select one from myfile;' ]
+    clargs = [ 'csvsqlcli.py', 
+               '-i', str(fin.realpath()),
+               '-o', str(fout.realpath()), 
+               '-s', 'select one from myfile;' ]
     with pytest.raises(SystemExit):
         csvsqlcli.csvsql_process_cml_args(clargs)
     captured = capsys.readouterr()
@@ -113,7 +115,7 @@ def test_csvsql_process_cml_args_when_output_already_exists_and_not_forced(capsy
     assert captured[1] != ''
 
 def test_csvsql_process_cml_args_when_no_input_file(capsys):
-    clargs = [ 'csvsqlcli.py', 'select tbl_name from sqlite_master;' ]
+    clargs = [ 'csvsqlcli.py', '-s', 'select tbl_name from sqlite_master;' ]
     expected_output = 'tbl_name\n'
     csvsqlcli.csvsql_process_cml_args(clargs)
     captured = capsys.readouterr()
@@ -121,7 +123,7 @@ def test_csvsql_process_cml_args_when_no_input_file(capsys):
     assert captured[1] == ''
 
 def test_csvsql_process_cml_args_when_statement_error(capsys):
-    clargs = [ 'csvsqlcli.py', 'select foo from bar;' ]
+    clargs = [ 'csvsqlcli.py', '-s', 'select foo from bar;' ]
     with pytest.raises(SystemExit):
         csvsqlcli.csvsql_process_cml_args(clargs)
     captured = capsys.readouterr()
@@ -138,7 +140,11 @@ def test_csvsql_process_cml_args_when_multiple_input_entries(tmpdir):
     output_file_path = pathlib.Path(str(tmpdir.realpath())) / 'outputfile.csv'
     fin_en.write(contents_en)
     fin_nh.write(contents_nh)
-    clargs = [ 'csvsqlcli.py', '-i', str(fin_en.realpath()), '-i', str(fin_nh.realpath()), '-o', str(fout.realpath()), 'select one+ichi as oneichi from file_en, file_nh where two = ni' ]
+    clargs = [ 'csvsqlcli.py', 
+               '-i', str(fin_en.realpath()), 
+               '-i', str(fin_nh.realpath()), 
+               '-o', str(fout.realpath()), 
+               '-s', 'select one+ichi as oneichi from file_en, file_nh where two = ni' ]
     expected_output = 'oneichi\n4\n10\n'
     csvsqlcli.csvsql_process_cml_args(clargs)
     assert output_file_path.read_text() == expected_output
@@ -153,7 +159,10 @@ def test_csvsql_process_cml_args_when_multiple_entries_on_same_input_option(tmpd
     output_file_path = pathlib.Path(str(tmpdir.realpath())) / 'outputfile.csv'
     fin_en.write(contents_en)
     fin_nh.write(contents_nh)
-    clargs = [ 'csvsqlcli.py', '-i', str(fin_en.realpath()), str(fin_nh.realpath()), '-o', str(fout.realpath()), 'select one+ichi as oneichi from file_en, file_nh where two = ni' ]
+    clargs = [ 'csvsqlcli.py', 
+                '-i', str(fin_en.realpath()), str(fin_nh.realpath()), 
+                '-o', str(fout.realpath()), 
+                '-s', 'select one+ichi as oneichi from file_en, file_nh where two = ni' ]
     expected_output = 'oneichi\n4\n10\n'
     csvsqlcli.csvsql_process_cml_args(clargs)
     assert output_file_path.read_text() == expected_output

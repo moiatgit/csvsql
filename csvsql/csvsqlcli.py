@@ -11,7 +11,7 @@
     (first row) and then, it makes sqlite3 to execute the required SQL statements on the resulting
     database.
 
-    Run it with -h  (or check get_args() method) to see available options
+    Run it with -h  (or check get_argparse() method) to see available options
 
     This project is based on R. Dreas Nielsen's querycsv forked on version 4.0.0
     The main difference with R. Dreas' program is that csvsqlcli is just a byproduct. The main
@@ -35,31 +35,44 @@ import csvsql
 # Current version of this cli
 _VERSION = "1.0.0"
 
-class ExtendAction(argparse.Action):
-    """ This class defines an action, similar to 'append' that allows argparse to collect multiple
-    args for the same option in a flat list. i.e.
 
-    "-i one two -i three" would generate with 'append' the list [['one', 'two'], ['three']]
-    'ExtendAction will return ['one', 'two', 'three'] instead
+class CsvSqlArgParser(argparse.ArgumentParser):
+    """ This class defines the parsing of the arguments for the csvsqlcli
 
-    Note: solution found at https://stackoverflow.com/questions/41152799/argparse-flatten-the-result-of-action-append
-    """
-    def __call__(self, parser, namespace, values, option_string=None):
-        items = getattr(namespace, self.dest) or []
-        items.extend(values)
-        setattr(namespace, self.dest, items)
+        It defines two actions: 'extend' and 'extend_unique' """
 
-class ExtendActionUnique(argparse.Action):
-    """ This class defines an action, similar to ExtendAction but removing repeated input. It
-    preserves the original order.
+    class ExtendAction(argparse.Action):
+        """ This class defines an action, similar to 'append' that allows argparse to collect multiple
+        args for the same option in a flat list. i.e.
 
-    "-i one two one -i two three -i three four" would generate [ 'one', 'two', 'three', 'four' ]
+        Example: "-i one two -i three" would generate with 'append' the list [['one', 'two'], ['three']]
+        'ExtendAction will return ['one', 'two', 'three'] instead
 
-    """
-    def __call__(self, parser, namespace, values, option_string=None):
-        items = getattr(namespace, self.dest) or []
-        items.extend(v for v in values if v not in items)
-        setattr(namespace, self.dest, items)
+        Note: solution found at https://stackoverflow.com/questions/41152799/argparse-flatten-the-result-of-action-append
+        """
+        def __call__(self, parser, namespace, values, option_string=None):
+            items = getattr(namespace, self.dest) or []
+            items.extend(values)
+            setattr(namespace, self.dest, items)
+
+    class ExtendActionUnique(argparse.Action):
+        """ This class defines an action, similar to ExtendAction but removing repeated input. It
+        preserves the original order.
+        Example: "-i one two one -i two three -i three four" would generate [ 'one', 'two', 'three', 'four' ]
+        """
+        def __call__(self, parser, namespace, values, option_string=None):
+            items = getattr(namespace, self.dest) or []
+            items.extend(v for v in values if v not in items)
+            setattr(namespace, self.dest, items)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.register('action', 'extend', CsvSqlArgParser.ExtendAction)
+        self.register('action', 'extend_unique', CsvSqlArgParser.ExtendActionUnique)
+
+    def error(self, message):
+        """ Prints help message on parsing error """
+        print_error_run_function_and_exit("Error: %s"%message, self.print_help)
 
 
 
@@ -68,8 +81,8 @@ def csvsql_process_cml_args(clargs):
     executes the required statements on the required data.
     Finally, it writes out the results of the last statement to the required output destination.
     """
-    args = get_args(clargs)
-    assert_valid_args(args)
+    parser = get_argparse(clargs[0])
+    args = get_args(parser, clargs[1:])
     statements = get_statements(args)
     db = get_db(args)
     try:
@@ -81,70 +94,69 @@ def csvsql_process_cml_args(clargs):
     db.close()
 
 
-def get_args(clargs):
-    """ processes the arguments in clargs and returns a dictionary with the parsed arguments.
-
-        clargs: a list of arguments as recollected by sys.argv. i.e. clargs[0] is the program name
-
+def get_argparse(program_name):
+    """ constructs an argument parser for this CLI and returns it.
+        program_name: a str containing the name of this CLI
     """
-
-    program_name = clargs[0]
-    p = argparse.ArgumentParser(prog=program_name, description="This program allows the execution of SQL on csv files")
-    p.register('action', 'extend', ExtendAction)
-    p.register('action', 'extend_unique', ExtendActionUnique)
-    p.add_argument('-v', '--version', action='version', version='%s version %s'%(program_name, _VERSION))
-    p.add_argument("-d", "--database",
+    parser = CsvSqlArgParser(prog=program_name, description="This program allows the execution of SQL on csv files")
+    parser.add_argument('-v', '--version', action='version', version='%s version %s'%(program_name, _VERSION))
+    parser.add_argument("-d", "--database",
             help="Use the specified sqlite file as intermediate storage. If the file does not exist, it will be created.")
-    p.add_argument("-i", "--input",
+    parser.add_argument("-i", "--input",
             action="extend_unique", 
             nargs='+',
+            default = [],
             help="Input csv filename. Multiple -i options can be used to specify more than one input file."
                  "Duplications will be ignored.")
-    p.add_argument("-o", "--output",
+    parser.add_argument("-o", "--output",
             help="Send output to this csv file. The file must not exist unleast --force is specified.")
-    p.add_argument("--force", default=False, action='store_false')
-    p.add_argument("-f", "--file",
+    parser.add_argument("--force", default=False, action='store_false')
+    parser.add_argument("-f", "--file",
             action = "extend",
             nargs='+',
+            default = [],
             help="Execute SQL statements stored in the given file. Multiple -f options can be used to "
                  "specify more than one statement sources. Each statement will be executed sequentially in the "
                  "specified order. Statements specified with -s will be executed before -f ones.")
-    p.add_argument("-s", "--statement",
+    parser.add_argument("-s", "--statement",
             action = "extend",
+            default = [],
             help="Execute one or more SQL statements. Multiple -s options can be used to specify "
                  "more than one statement. They can also be specified separated by ';'. Statements "
                  "specified with -f option, will be executed after -s ones.",
             nargs='+')
-    args = p.parse_args(clargs[1:])
-    vargs = vars(args)
-    #vargs['input'] = flatten_list(XXX now you have to flatten the list to [] if None. Consider 'unique' option for input but not for statement. Then you'll have to retest all cli since the api has changed
-    print('XXX', vargs)
-    sys.exit(1)
-    return vargs
+
+    return parser
 
 
-def assert_valid_args(args):
-    """ Asserts the processed arguments are valid
+def get_args(parser, clargs):
+    """ given an argument parser (ArgumentParser) it processes
 
-        args: a dictionary containing arguments and values.
+        parser: a ArgumentParser with all the options already defined
+
+        clargs: a list of arguments as recollected by sys.argv (without the program name)
 
         In case the combination of arguments is not vàlid, it shows a message and stops execution.
+
+        returns: a dictionary containing arguments and values.
+
     """
-    if args.get('database', None):
+    args = parser.parse_args(clargs)
+    if args.database:
         assert_file_exists(args['database'])
 
-    if args.get('input', None):
-        for path in args['input']:
-            assert_file_exists(path)
+    if args.output:
+        if pathlib.Path(args.output).is_file() and not args.force:
+            print_error_and_exit("File %s already exists. Remove it or use --force option"%args.output)
 
-    if args.get('output', None):
-        if pathlib.Path(args['output']).is_file() and not args['force']:
-            print_error_and_exit("File %s already exists. Remove it or use --force option"%args['output'])
+    for path in args.input + args.file:
+        assert_file_exists(path)
 
-    if not args.get('statement', None):
-        if args.get('file', None):
-            print_error_and_exit("Either statement or --file options must be specified")
-        assert_file_exists(args['file'])
+    if not (args.file + args.statement):
+        print_error_run_function_and_exit("Nothing to do", parser.print_help)
+
+    return vars(args)
+
 
 
 def assert_file_exists(path):
@@ -165,10 +177,11 @@ def get_statements(args):
         Note: this method doesn't check for sintactically nor semantically valid SQL statements. It
         will accept as a "valid" statement any string starting with a non whitespace and ended by ';' 
     """
-    if args.get('statement', None):
-        statements = get_sql_statements_from_contents(args['statement'])
-    else:
-        statements = get_sql_statements_from_file(args['file'])
+    direct_statement = [ get_sql_statements_from_contents(sts) for sts in args['statement'] ]
+    filed_statement =  [ get_sql_statements_from_file(sts) for sts in args['file'] ]
+    statements = []
+    for sts in direct_statement + filed_statement:
+        statements.extend(sts)
     if statements:
         return statements
     print_error_and_exit("Not proper SQL statement has been specified")
@@ -236,6 +249,13 @@ def print_error_and_exit(msg):
     """ prints msg to the standard error output and exists """
     print(msg, file=sys.stderr)
     sys.exit(1)
+
+def print_error_run_function_and_exit(msg, function):
+    """ prints msg to the standard error output, executes a function and exists """
+    print(msg, file=sys.stderr)
+    function()
+    sys.exit(1)
+
 
 if __name__ == '__main__':
     csvsql_process_cml_args(sys.argv)
