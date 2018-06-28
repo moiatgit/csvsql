@@ -142,8 +142,12 @@ def get_args(parser, clargs):
 
     """
     args = parser.parse_args(clargs)
+
+    if not (args.file + args.statement):
+        print_error_run_function_and_exit("Nothing to do", parser.print_help)
+
     if args.database:
-        assert_file_exists(args['database'])
+        assert_file_exists(args.database)
 
     if args.output:
         if pathlib.Path(args.output).is_file() and not args.force:
@@ -151,9 +155,6 @@ def get_args(parser, clargs):
 
     for path in args.input + args.file:
         assert_file_exists(path)
-
-    if not (args.file + args.statement):
-        print_error_run_function_and_exit("Nothing to do", parser.print_help)
 
     return vars(args)
 
@@ -201,15 +202,6 @@ def get_sql_statements_from_contents(contents):
     sentences_from_newline = [ s.split(os.linesep) for s in sentences_from_semicolon ]
     return [ s.strip() for s in itertools.chain.from_iterable(sentences_from_newline) if len(s.strip())>0 ]
 
-
-def query_sqlite(sqlcmd, sqlfilename=None):
-    """
-    Run a SQL command on a sqlite database in the specified file
-    (or in memory if sqlfilename is None).
-    """
-    database = sqlfilename if sqlfilename else ':memory:'
-    with as_connection(database) as conn:
-        return execute_sql(conn, as_list(sqlcmd))
 
 def get_sql_statements_from_file(path):
     """ returns the last SELECT statement from the specified file in path.

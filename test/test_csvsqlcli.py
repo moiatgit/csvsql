@@ -47,12 +47,12 @@ def test_get_statements_from_contents_ignoring_newlines_within():
     assert result == expected
 
 
-def test_csvsql_process_cml_args_no_args_provided(capsys):
+def test_process_cml_args_no_args_provided(capsys):
     clargs = [ 'csvsqlcli.py' ]
     with pytest.raises(SystemExit):
         csvsqlcli.csvsql_process_cml_args(clargs)
 
-def test_csvsql_process_cml_args_simple_query(capsys, tmpdir):
+def test_process_cml_args_simple_query(capsys, tmpdir):
     contents = 'one,two,three\n1,2,3\n4,5,6'
     fd = tmpdir.mkdir('subdir').join('myfile.csv')
     fd.write(contents)
@@ -63,7 +63,7 @@ def test_csvsql_process_cml_args_simple_query(capsys, tmpdir):
     assert captured[0].replace('\r','') == expected_output
     assert captured[1] == ''
 
-def test_csvsql_process_cml_args_when_non_existing_output_file(capsys, tmpdir):
+def test_process_cml_args_when_non_existing_output_file(capsys, tmpdir):
     contents = 'one,two,three\n1,2,3\n4,5,6'
     mysubdir = tmpdir.mkdir('subdir')
     fd = mysubdir.join('myfile.csv')
@@ -79,7 +79,7 @@ def test_csvsql_process_cml_args_when_non_existing_output_file(capsys, tmpdir):
     assert captured[0] == ''
     assert captured[1] == ''
 
-def test_csvsql_process_cml_args_when_output_already_exists_and_forced(capsys, tmpdir):
+def test_process_cml_args_when_output_already_exists_and_forced(capsys, tmpdir):
     contents = 'one,two,three\n1,2,3\n4,5,6'
     mysubdir = tmpdir.mkdir('subdir')
     fin = mysubdir.join('myfile.csv')
@@ -97,7 +97,7 @@ def test_csvsql_process_cml_args_when_output_already_exists_and_forced(capsys, t
     assert captured[0] == ''
     assert captured[1] == ''
 
-def test_csvsql_process_cml_args_when_output_already_exists_and_not_forced(capsys, tmpdir):
+def test_process_cml_args_when_output_already_exists_and_not_forced(capsys, tmpdir):
     contents = 'one,two,three\n1,2,3\n4,5,6'
     mysubdir = tmpdir.mkdir('subdir')
     fin = mysubdir.join('myfile.csv')
@@ -114,7 +114,7 @@ def test_csvsql_process_cml_args_when_output_already_exists_and_not_forced(capsy
     assert captured[0] == ''
     assert captured[1] != ''
 
-def test_csvsql_process_cml_args_when_no_input_file(capsys):
+def test_process_cml_args_when_no_input_file(capsys):
     clargs = [ 'csvsqlcli.py', '-s', 'select tbl_name from sqlite_master;' ]
     expected_output = 'tbl_name\n'
     csvsqlcli.csvsql_process_cml_args(clargs)
@@ -122,7 +122,7 @@ def test_csvsql_process_cml_args_when_no_input_file(capsys):
     assert captured[0].replace('\r','') == expected_output
     assert captured[1] == ''
 
-def test_csvsql_process_cml_args_when_statement_error(capsys):
+def test_process_cml_args_when_statement_error(capsys):
     clargs = [ 'csvsqlcli.py', '-s', 'select foo from bar;' ]
     with pytest.raises(SystemExit):
         csvsqlcli.csvsql_process_cml_args(clargs)
@@ -131,7 +131,7 @@ def test_csvsql_process_cml_args_when_statement_error(capsys):
     assert 'error' in captured[1].lower()
 
 
-def test_csvsql_process_cml_args_when_multiple_input_entries(tmpdir):
+def test_process_cml_args_when_multiple_input_entries(tmpdir):
     contents_en = 'one,two,three\n1,2,3\n4,5,6\n'
     contents_nh = 'ichi,ni,san\n3,2,1\n6,5,4\n'
     fin_en = tmpdir.join('file_en.csv')
@@ -150,7 +150,7 @@ def test_csvsql_process_cml_args_when_multiple_input_entries(tmpdir):
     assert output_file_path.read_text() == expected_output
 
 
-def test_csvsql_process_cml_args_when_multiple_entries_on_same_input_option(tmpdir):
+def test_process_cml_args_when_multiple_entries_on_same_input_option(tmpdir):
     contents_en = 'one,two,three\n1,2,3\n4,5,6\n'
     contents_nh = 'ichi,ni,san\n3,2,1\n6,5,4\n'
     fin_en = tmpdir.join('file_en.csv')
@@ -165,6 +165,23 @@ def test_csvsql_process_cml_args_when_multiple_entries_on_same_input_option(tmpd
                 '-s', 'select one+ichi as oneichi from file_en, file_nh where two = ni' ]
     expected_output = 'oneichi\n4\n10\n'
     csvsqlcli.csvsql_process_cml_args(clargs)
+    assert output_file_path.read_text() == expected_output
+
+
+def test_process_cml_args_with_database(tmpdir):
+    tmppath = pathlib.Path(str(tmpdir.realpath()))
+    db_path = pathlib.Path(tmppath) / 'mydb.sqlite3'
+    out_path = pathlib.Path(tmppath) / 'outputfile.csv'
+    clargs = [ 'csvsqlcli.py',
+               '-d', str(db_path),
+               '-s', 'create table mytable (one, two, three);', 'insert into mytable values (1, 2, 3);' ]
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    clargs = [ 'csvsqlcli.py',
+               '-d', str(db_path),
+               '-s', 'select one from mytable;',
+               '-o', str(output_file_path)]
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    expected_output = 'one\n1'
     assert output_file_path.read_text() == expected_output
 
 

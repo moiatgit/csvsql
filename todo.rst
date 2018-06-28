@@ -1,13 +1,10 @@
 Currently
 =========
 
-(done) on test test_csvsql_process_cml_args_when_multiple_entries_on_same_input_option()
-    Problem: -i un.csv dos.csv -i tres.csv 'select * from un' is unable to
-    find out the statement. It would require to add some mark to indicate
-    the actual query. Another possibility is to consider it as the last
-    arg
+- testing case -db
 
-
+  Problem: when database doesn't exists, it should create one instead of complaining it is not
+  there!
 
 
 ToDo
@@ -30,6 +27,11 @@ ToDo
 
 - test csvsqlcli
 
+
+  - case 'db'
+
+  - case fake --database
+
   - case multiple statements in -s
 
   - case multiple files in -f
@@ -43,8 +45,6 @@ ToDo
   - case intermediate storage '-f' o '--db'
 
   - case more than one 'input'¡
-
-  - case 'db'
 
 
 - define package
