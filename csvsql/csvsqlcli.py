@@ -45,7 +45,10 @@ def csvsql_process_cml_args(clargs):
     assert_valid_args(args)
     statements = get_statements(args)
     db = get_db(args)
-    results = csvsql.execute_statements(db, statements)[-1] # just results for the last statement
+    try:
+        results = csvsql.execute_statements(db, statements)[-1] # just results for the last statement
+    except sqlite3.OperationalError as err:
+        print_error_and_exit("Problems with the statements %s Error: %s"%(statements, err))
     destination = args.get('output', None)
     write_output(results, destination)
     db.close()
@@ -60,21 +63,29 @@ def get_args(clargs):
 
     program_name = clargs[0]
     p = argparse.ArgumentParser(prog=program_name, description="This program allows the execution of SQL on csv files")
-    p.add_argument("-i", "--input",
-            action="append", 
-            help="Input csv filename. Multiple -i options can be used to specify more than one input file")
+    p.add_argument('--version', action='version', version='%s %s'%(program_name, _VERSION))
     p.add_argument("-d", "--database",
             help="Use the specified sqlite file as intermediate storage. If the file does not exist, it will be created.")
+    p.add_argument("-i", "--input",
+            action="append", 
+            nargs='+',
+            help="Input csv filename. Multiple -i options can be used to specify more than one input file")
     p.add_argument("-o", "--output",
             help="Send output to this csv file. The file must not exist unleast --force is specified.")
     p.add_argument("--force", default=False, action='store_false')
-    p.add_argument("-s", "--script",
+    p.add_argument("-f", "--file",
             help="Execute a SQL script from the given file. If -q is provided, this one is ignored."
               "Only the last SELECT command in the file will be processed.")
-    p.add_argument("statement", help="SQL statement. i.e. the SELECT statement. If not specified, --script must be provided.")
-    p.add_argument('-V', '--version', action='version', version='%s %s'%(program_name, _VERSION))
+    p.add_argument("-s", "--statement",
+            action = "append",
+            help="Execute one or more SQL statements. If not specified, --file must be provided.",
+            nargs='+')
     args = p.parse_args(clargs[1:])
-    return vars(args)
+    vargs = vars(args)
+    vargs['input'] = flatten_list(XXX now you have to flatten the list to [] if None. Consider 'unique' option for input but not for statement. Then you'll have to retest all cli since the api has changed
+    print('XXX', vargs)
+    sys.exit(1)
+    return vargs
 
 
 def assert_valid_args(args):
@@ -96,9 +107,9 @@ def assert_valid_args(args):
             print_error_and_exit("File %s already exists. Remove it or use --force option"%args['output'])
 
     if not args.get('statement', None):
-        if args.get('script', None):
-            print_error_and_exit("Either statement or --script options must be specified")
-        assert_file_exists(args['script'])
+        if args.get('file', None):
+            print_error_and_exit("Either statement or --file options must be specified")
+        assert_file_exists(args['file'])
 
 
 def assert_file_exists(path):
@@ -112,7 +123,7 @@ def get_statements(args):
 
         args: a dictionary containing arguments and values.
 
-        The statements can be defined in 'statement' or in 'script' keys of args.
+        The statements can be defined in 'statement' or in 'file' keys of args.
 
         In case, there are no statements it displays an error and stops execution.
 
@@ -122,7 +133,7 @@ def get_statements(args):
     if args.get('statement', None):
         statements = get_sql_statements_from_contents(args['statement'])
     else:
-        statements = get_sql_statements_from_file(args['script'])
+        statements = get_sql_statements_from_file(args['file'])
     if statements:
         return statements
     print_error_and_exit("Not proper SQL statement has been specified")

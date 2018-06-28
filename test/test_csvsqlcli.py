@@ -122,8 +122,42 @@ def test_csvsql_process_cml_args_when_no_input_file(capsys):
 
 def test_csvsql_process_cml_args_when_statement_error(capsys):
     clargs = [ 'csvsqlcli.py', 'select foo from bar;' ]
-    expected_output = 'tbl_name\n'
-    csvsqlcli.csvsql_process_cml_args(clargs)
+    with pytest.raises(SystemExit):
+        csvsqlcli.csvsql_process_cml_args(clargs)
     captured = capsys.readouterr()
-    assert captured[0].replace('\r','') == expected_output
-    assert captured[1] == ''
+    assert captured[0] == ''
+    assert 'error' in captured[1].lower()
+
+
+def test_csvsql_process_cml_args_when_multiple_input_entries(tmpdir):
+    contents_en = 'one,two,three\n1,2,3\n4,5,6\n'
+    contents_nh = 'ichi,ni,san\n3,2,1\n6,5,4\n'
+    fin_en = tmpdir.join('file_en.csv')
+    fin_nh = tmpdir.join('file_nh.csv')
+    fout = tmpdir.join('outputfile.csv')
+    output_file_path = pathlib.Path(str(tmpdir.realpath())) / 'outputfile.csv'
+    fin_en.write(contents_en)
+    fin_nh.write(contents_nh)
+    clargs = [ 'csvsqlcli.py', '-i', str(fin_en.realpath()), '-i', str(fin_nh.realpath()), '-o', str(fout.realpath()), 'select one+ichi as oneichi from file_en, file_nh where two = ni' ]
+    expected_output = 'oneichi\n4\n10\n'
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    assert output_file_path.read_text() == expected_output
+
+
+def test_csvsql_process_cml_args_when_multiple_entries_on_same_input_option(tmpdir):
+    contents_en = 'one,two,three\n1,2,3\n4,5,6\n'
+    contents_nh = 'ichi,ni,san\n3,2,1\n6,5,4\n'
+    fin_en = tmpdir.join('file_en.csv')
+    fin_nh = tmpdir.join('file_nh.csv')
+    fout = tmpdir.join('outputfile.csv')
+    output_file_path = pathlib.Path(str(tmpdir.realpath())) / 'outputfile.csv'
+    fin_en.write(contents_en)
+    fin_nh.write(contents_nh)
+    clargs = [ 'csvsqlcli.py', '-i', str(fin_en.realpath()), str(fin_nh.realpath()), '-o', str(fout.realpath()), 'select one+ichi as oneichi from file_en, file_nh where two = ni' ]
+    expected_output = 'oneichi\n4\n10\n'
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    assert output_file_path.read_text() == expected_output
+
+
+
+

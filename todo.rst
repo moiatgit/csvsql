@@ -1,7 +1,11 @@
 Currently
 =========
 
-on test test_csvsql_process_cml_args_when_statement_error()
+on test test_csvsql_process_cml_args_when_multiple_entries_on_same_input_option()
+    Problem: -i un.csv dos.csv -i tres.csv 'select * from un' is unable to
+    find out the statement. It would require to add some mark to indicate
+    the actual query. Another possibility is to consider it as the last
+    arg
 
 
 
@@ -25,6 +29,8 @@ ToDo
 
 
 - test csvsqlcli
+
+  - case csv is not sound (e.g. some rows have extra or fewer columns),
 
   - case intermediate storage '-f' o '--db'
 
