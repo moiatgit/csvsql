@@ -8,6 +8,8 @@ Currently
 
   (done) Problem: it is not inserting properly. Maybe there's a problem with more than one statement!
 
+  (done) implementing a check of --database integrity
+
 
 ToDo
 ====
@@ -27,7 +29,7 @@ ToDo
 
   - (done) case 'db'
 
-  - case fake --database
+  - (done) case fake --database
 
   - case multiple statements in -s
 

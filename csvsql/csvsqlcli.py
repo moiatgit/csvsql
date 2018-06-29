@@ -110,15 +110,15 @@ def get_argparse(program_name):
             nargs='+',
             default = [],
             help="Input csv filename. Multiple -i options can be used to specify more than one input file."
-                 "Duplications will be ignored. In case --database is specified, the contents of
-                 --input files will be stored in the database, as tables named after the file name.
-                 On pre-existing tables, the previous contents will be overriden (not merged) without
-                 warning.")
+                 "Duplications will be ignored. In case --database is specified, the contents of "
+                 "--input files will be stored in the database, as tables named after the file name"
+                 ". On pre-existing tables, the previous contents will be overriden (not merged) "
+                 "without warning.")
     parser.add_argument("-o", "--output",
             help="Send output to this csv file. The file must not exist unleast --force is specified.")
     parser.add_argument("--force", 
                         default=False,
-                        action='store_false' 
+                        action='store_false',
                         help="Allows to override --output filename if already present.")
     parser.add_argument("-f", "--file",
             action = "extend",
@@ -162,9 +162,20 @@ def get_args(parser, clargs):
     for path in args.input + args.file:
         assert_file_exists(path)
 
+    if args.database:
+        if pathlib.Path(args.database).is_file():
+            assert_valid_database(args.database)
+
     return vars(args)
 
-
+def assert_valid_database(path):
+    """ Asserts path is a file containing a valid sqlite3 database """
+    db = sqlite3.connect(path)
+    try:
+        result = csvsql.execute_statement(db, 'pragma integrity_check;')
+    except sqlite3.DatabaseError as err:
+        print_error_and_exit("Problems found with %s: %s"%(path, err))
+    db.close()
 
 def assert_file_exists(path):
     """ Asserts path is an existing file. Otherwise, displays an error and stops execution """

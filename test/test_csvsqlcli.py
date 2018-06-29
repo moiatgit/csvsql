@@ -186,5 +186,10 @@ def test_process_cml_args_with_database(tmpdir):
     assert out_path.read_text() == expected_output
 
 
-
+def test_process_cml_args_with_non_a_database(tmpdir):
+    db_path = tmpdir.join('fake.sqlite3')
+    db_path.write("Some non sqlite3 contents")
+    clargs = [ 'csvsqlcli.py', '-d', str(db_path.realpath()), '-s', 'pragma integrity_check;' ]
+    with pytest.raises(SystemExit):
+        csvsqlcli.csvsql_process_cml_args(clargs)
 
