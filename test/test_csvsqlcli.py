@@ -174,15 +174,16 @@ def test_process_cml_args_with_database(tmpdir):
     out_path = pathlib.Path(tmppath) / 'outputfile.csv'
     clargs = [ 'csvsqlcli.py',
                '-d', str(db_path),
-               '-s', 'create table mytable (one, two, three);', 'insert into mytable values (1, 2, 3);' ]
+               '-s', 'create table mytable (one, two, three);', 
+               '-s', 'insert into mytable values (1, 2, 3);' ]
     csvsqlcli.csvsql_process_cml_args(clargs)
     clargs = [ 'csvsqlcli.py',
                '-d', str(db_path),
                '-s', 'select one from mytable;',
-               '-o', str(output_file_path)]
+               '-o', str(out_path)]
     csvsqlcli.csvsql_process_cml_args(clargs)
-    expected_output = 'one\n1'
-    assert output_file_path.read_text() == expected_output
+    expected_output = 'one\n1\n'
+    assert out_path.read_text() == expected_output
 
 
 

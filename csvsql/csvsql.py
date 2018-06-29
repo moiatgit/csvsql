@@ -55,11 +55,15 @@ def import_csv_list(db, filenames):
 
 def execute_statement(db, statement):
     """ executes an sql statement on db and returns the results """
+    print("XXX executing statement %s"%statement)
     curs = db.execute(statement)
     return [tuple([item[0] for item in curs.description])] + list(curs) if curs.description else []
 
 def execute_statements(db, statements):
     """ executes a list of sql statements on db and returns the list of results """
-    return [ execute_statement(db, statement) for statement in statements ]
+    print("XXX statements %s"%statements)
+    results = [ execute_statement(db, statement) for statement in statements ]
+    db.commit()
+    return results
 
 

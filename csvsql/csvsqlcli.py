@@ -17,7 +17,9 @@
     The main difference with R. Dreas' program is that csvsqlcli is just a byproduct. The main
     target of this project is csvsql, a library to allow the use of SQL in csv programatically.
 
+
 """
+
 
 import sys
 import os
@@ -98,7 +100,8 @@ def get_argparse(program_name):
     """ constructs an argument parser for this CLI and returns it.
         program_name: a str containing the name of this CLI
     """
-    parser = CsvSqlArgParser(prog=program_name, description="This program allows the execution of SQL on csv files")
+    parser = CsvSqlArgParser(prog=program_name, description="This program allows the execution of "
+                                                            "SQL statements on csv files.")
     parser.add_argument('-v', '--version', action='version', version='%s version %s'%(program_name, _VERSION))
     parser.add_argument("-d", "--database",
             help="Use the specified sqlite file as intermediate storage. If the file does not exist, it will be created.")
@@ -107,10 +110,16 @@ def get_argparse(program_name):
             nargs='+',
             default = [],
             help="Input csv filename. Multiple -i options can be used to specify more than one input file."
-                 "Duplications will be ignored.")
+                 "Duplications will be ignored. In case --database is specified, the contents of
+                 --input files will be stored in the database, as tables named after the file name.
+                 On pre-existing tables, the previous contents will be overriden (not merged) without
+                 warning.")
     parser.add_argument("-o", "--output",
             help="Send output to this csv file. The file must not exist unleast --force is specified.")
-    parser.add_argument("--force", default=False, action='store_false')
+    parser.add_argument("--force", 
+                        default=False,
+                        action='store_false' 
+                        help="Allows to override --output filename if already present.")
     parser.add_argument("-f", "--file",
             action = "extend",
             nargs='+',
@@ -145,9 +154,6 @@ def get_args(parser, clargs):
 
     if not (args.file + args.statement):
         print_error_run_function_and_exit("Nothing to do", parser.print_help)
-
-    if args.database:
-        assert_file_exists(args.database)
 
     if args.output:
         if pathlib.Path(args.output).is_file() and not args.force:

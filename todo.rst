@@ -3,8 +3,10 @@ Currently
 
 - testing case -db
 
-  Problem: when database doesn't exists, it should create one instead of complaining it is not
+  (done) Problem: when database doesn't exists, it should create one instead of complaining it is not
   there!
+
+  (done) Problem: it is not inserting properly. Maybe there's a problem with more than one statement!
 
 
 ToDo
@@ -20,15 +22,10 @@ ToDo
   statements. Statements will fail when accessing to unnexisting tables, just as it does when that
   happens with tables not included in the --use or --input!
 
-  Then, --db could be used to define the path of a folder containing a bunch of csv. BUT, it can be
-  implemented by --input allowing multiple filenames (e.g. --input \*.csv ) and in a future, by
-  allowing specification of the data by a .json-like file
-
-
 - test csvsqlcli
 
 
-  - case 'db'
+  - (done) case 'db'
 
   - case fake --database
 
@@ -69,9 +66,24 @@ ToDo
 Enhancements
 ============
 
-- allow --input to accept multiple filenames
+- (done) allow --input to accept multiple filenames
 
 - some optimizations:
+
+  - db.commit() only when non SELECT statement is present
+
+  - perform only the last SELECT statement.
+
+  - allow the execution of CREATE TABLE statements to generate the corresponding .csv
+
+  - allow the specification of tables in FROM clausules to infer the .csv files even if not present
+    in the --input args. That would make sense specially when definining some set of folders
+    containing .csv that compose the .csv database. Something like a CSVSQLPATH env var.
+
+  - allow the execution of statements in the exact order given in the arg line. Now it is grouping
+    first the -i and then the -f because you don't know how to separate them. It probably will have
+    to do with the argparse.Action definition that could use a "global" list to append each
+    argument in the reading order.
 
   - if you keep the results of each statement just to show the last one, you might be keeping a lot
     of data in memory for nothing! In fact, just the last statement could simply be too much for big
