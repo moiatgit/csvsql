@@ -193,3 +193,25 @@ def test_process_cml_args_with_non_a_database(tmpdir):
     with pytest.raises(SystemExit):
         csvsqlcli.csvsql_process_cml_args(clargs)
 
+def test_process_cml_args_multiple_statement_sources(tmpdir):
+    fin_contents("one,two,three\n1,2,3\n")
+    fin = tmpdir.join('mytable.csv')
+    fin.write(fin_contents)
+    contents_f1 = "insert into mytable values (4, 5, 6);"
+    fstatements1 = tmpdir.join('statements01.sql')
+    fstatements1.write(contents_f1)
+    contents_f2 = "create table anothertable (one, two);"
+                  "insert into anothertable select one, two from mytable;"
+    fstatements2 = tmpdir.join('statements02.sql')
+    fstatements2.write(contents_f2)
+    fout = tmpdir.join('outputfile.csv')
+    clargs = [ 'csvsqlcli.py',
+               '-o', str(fout.realpath()),
+               '-i', str(fin.realpath()),
+               '-f', str(fstatements1.realpath()),
+               '-f', str(fstatements2.realpath()),
+               '-s', 'select * from anothertable;',
+               ]
+    expected_output = 'one,two\n1,2\n4,5\n'
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    assert pathlib.Path(str(fout.realpath())).read_text() == expected_output

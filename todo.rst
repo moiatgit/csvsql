@@ -10,6 +10,16 @@ Currently
 
   (done) implementing a check of --database integrity
 
+  on test_process_cml_args_multiple_statement_sources()
+  The problem with this test is that it requires a sequential processing of statements as defined in
+  this enhancement:
+
+  - allow the execution of statements in the exact order given in the arg line. Now it is grouping
+    first the -i and then the -f because you don't know how to separate them. It probably will have
+    to do with the argparse.Action definition that could use a "global" list to append each
+    argument in the reading order.
+
+
 
 ToDo
 ====
@@ -81,11 +91,6 @@ Enhancements
   - allow the specification of tables in FROM clausules to infer the .csv files even if not present
     in the --input args. That would make sense specially when definining some set of folders
     containing .csv that compose the .csv database. Something like a CSVSQLPATH env var.
-
-  - allow the execution of statements in the exact order given in the arg line. Now it is grouping
-    first the -i and then the -f because you don't know how to separate them. It probably will have
-    to do with the argparse.Action definition that could use a "global" list to append each
-    argument in the reading order.
 
   - if you keep the results of each statement just to show the last one, you might be keeping a lot
     of data in memory for nothing! In fact, just the last statement could simply be too much for big
