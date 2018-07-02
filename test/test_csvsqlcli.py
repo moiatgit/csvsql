@@ -7,44 +7,52 @@ import pathlib
 import csvsqlcli
 
 
-def test_get_statements_from_contents_when_theres_just_one():
+def test_split_statements_when_theres_just_one():
     contents = "SELECT * FROM mytable;"
     expected = [ contents ]
-    result = csvsqlcli.get_sql_statements_from_contents(contents)
+    result = csvsqlcli.split_statements(contents)
     assert result == expected
 
 
-def test_get_statements_from_contents_when_theres_just_one_and_requires_trimming():
+def test_split_statements_when_theres_just_one_and_requires_trimming():
     statement = "SELECT * FROM mytable;"
     contents = "     %s     "%statement
     expected = [ statement ]
-    result = csvsqlcli.get_sql_statements_from_contents(contents)
+    result = csvsqlcli.split_statements(contents)
     assert result == expected
 
 
-def test_get_statements_from_contents_when_multiple():
+def test_split_statements_when_multiple():
     statements = [ "SELECT * FROM mytable;", "select col1 FROM mytable;", "select col1,col2 FROM mytable where col1=col2;" ]
     contents = "\n".join(statements)
     expected = statements
-    result = csvsqlcli.get_sql_statements_from_contents(contents)
+    result = csvsqlcli.split_statements(contents)
     assert result == expected
 
 
-def test_get_statements_from_contents_ignoring_comments():
+def test_split_statements_ignoring_comments():
     statements = [ "SELECT * FROM mytable;", "select col1 FROM mytable;", "select col1,col2 FROM mytable where col1=col2;" ]
     contents = "-- SELECT * FROM anyothertable;\n" + "\n".join(statements[:-1]) + "    -- another comment to ignore\n" + statements[-1]
     expected = statements
-    result = csvsqlcli.get_sql_statements_from_contents(contents)
+    result = csvsqlcli.split_statements(contents)
     assert result == expected
 
 
-def test_get_statements_from_contents_ignoring_newlines_within():
+def test_split_statements_ignoring_newlines_within():
     statements = [ "SELECT *\nFROM mytable\n;", "select\ncol1 FROM mytable\n\n;", "select col1,\n\ncol2 FROM mytable where col1=\ncol2;" ]
     statements_clean = [ s.replace('\n', ' ') for s in statements ]
     contents = "-- SELECT * FROM anyothertable;\n" + "\n".join(statements[:-1]) + "    -- another comment to ignore\n" + statements[-1]
     expected = statements_clean
-    result = csvsqlcli.get_sql_statements_from_contents(contents)
+    result = csvsqlcli.split_statements(contents)
     assert result == expected
+
+#def test_split_statements_ignoring_comment_blocks():
+#    statements = [ "SELECT * FROM mytable;", "select col1 FROM mytable;", "select col1,col2 FROM mytable where col1=col2;" ]
+#    contents = "/* SELECT * \nFROM anyothertable;*/" + "\n".join(statements[:-1]) + "/* -- another comment to ignore\n*/" + statements[-1]
+#    expected = statements
+#    result = csvsqlcli.split_statements(contents)
+#    assert result == expected
+
 
 
 def test_process_cml_args_no_args_provided(capsys):
@@ -194,13 +202,13 @@ def test_process_cml_args_with_non_a_database(tmpdir):
         csvsqlcli.csvsql_process_cml_args(clargs)
 
 def test_process_cml_args_multiple_statement_sources(tmpdir):
-    fin_contents("one,two,three\n1,2,3\n")
+    fin_contents = "one,two,three\n1,2,3\n"
     fin = tmpdir.join('mytable.csv')
     fin.write(fin_contents)
     contents_f1 = "insert into mytable values (4, 5, 6);"
     fstatements1 = tmpdir.join('statements01.sql')
     fstatements1.write(contents_f1)
-    contents_f2 = "create table anothertable (one, two);"
+    contents_f2 = "create table anothertable (one, two);" \
                   "insert into anothertable select one, two from mytable;"
     fstatements2 = tmpdir.join('statements02.sql')
     fstatements2.write(contents_f2)

@@ -67,10 +67,18 @@ class CsvSqlArgParser(argparse.ArgumentParser):
             items.extend(v for v in values if v not in items)
             setattr(namespace, self.dest, items)
 
+    class CollectPairsOptionValue(argparse.Action):
+        """ This class defines an action that composes a list of tuples (option_string, value) and appends them to the attribute name 'pairs_' in the received order """
+        def __call__(self, parser, namespace, values, option_string=None):
+            items = getattr(namespace, self.dest) or []
+            items.extend((option_string, v) for v in values)
+            setattr(namespace, self.dest, items)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.register('action', 'extend', CsvSqlArgParser.ExtendAction)
         self.register('action', 'extend_unique', CsvSqlArgParser.ExtendActionUnique)
+        self.register('action', 'collect_pairs', CsvSqlArgParser.CollectPairsOptionValue)
 
     def error(self, message):
         """ Prints help message on parsing error """
@@ -83,15 +91,15 @@ def csvsql_process_cml_args(clargs):
     executes the required statements on the required data.
     Finally, it writes out the results of the last statement to the required output destination.
     """
-    parser = get_argparse(clargs[0])
+    parser = get_argparse(program_name=clargs[0])
     args = get_args(parser, clargs[1:])
-    statements = get_statements(args)
+    statements = get_statements(args.statements)
     db = get_db(args)
     try:
         results = csvsql.execute_statements(db, statements)[-1] # just results for the last statement
     except sqlite3.OperationalError as err:
         print_error_and_exit("Problems with the statements %s Error: %s"%(statements, err))
-    destination = args.get('output', None)
+    destination = args.output
     write_output(results, destination)
     db.close()
 
@@ -121,19 +129,21 @@ def get_argparse(program_name):
                         action='store_false',
                         help="Allows to override --output filename if already present.")
     parser.add_argument("-f", "--file",
-            action = "extend",
+            action = "collect_pairs",
+            dest = 'statements',
             nargs='+',
             default = [],
             help="Execute SQL statements stored in the given file. Multiple -f options can be used to "
                  "specify more than one statement sources. Each statement will be executed sequentially in the "
-                 "specified order. Statements specified with -s will be executed before -f ones.")
+                 "specified order.")
     parser.add_argument("-s", "--statement",
-            action = "extend",
+            action = "collect_pairs",
+            dest = 'statements',
+            nargs='+',
             default = [],
             help="Execute one or more SQL statements. Multiple -s options can be used to specify "
-                 "more than one statement. They can also be specified separated by ';'. Statements "
-                 "specified with -f option, will be executed after -s ones.",
-            nargs='+')
+                 "more than one statement. Each statement will be executed sequentially in the "
+                 "specified order.")
 
     return parser
 
@@ -147,26 +157,26 @@ def get_args(parser, clargs):
 
         In case the combination of arguments is not vàlid, it shows a message and stops execution.
 
-        returns: a dictionary containing arguments and values.
+        returns: the namespace with the arguments
 
     """
     args = parser.parse_args(clargs)
 
-    if not (args.file + args.statement):
+    if not (args.statements):
         print_error_run_function_and_exit("Nothing to do", parser.print_help)
 
     if args.output:
         if pathlib.Path(args.output).is_file() and not args.force:
             print_error_and_exit("File %s already exists. Remove it or use --force option"%args.output)
 
-    for path in args.input + args.file:
+    for path in args.input + [ path for option, path in args.statements if option == '-f']:
         assert_file_exists(path)
 
     if args.database:
         if pathlib.Path(args.database).is_file():
             assert_valid_database(args.database)
 
-    return vars(args)
+    return args
 
 def assert_valid_database(path):
     """ Asserts path is a file containing a valid sqlite3 database """
@@ -183,61 +193,43 @@ def assert_file_exists(path):
         print_error_and_exit("File %s not found"%path)
 
 
-def get_statements(args):
-    """ given the arguments already validated, it returns the list of statements to be executed.
+def get_statements(pairs):
+    """ given the arguments already validated, it returns a list with the statements to be executed.
 
-        args: a dictionary containing arguments and values.
-
-        The statements can be defined in 'statement' or in 'file' keys of args.
+        pairs: a list of tuples (option_string, value) where option_string can be -f to indicate the value
+              is a path, or -s to indicate the value is a statement.
 
         In case, there are no statements it displays an error and stops execution.
 
-        Note: this method doesn't check for sintactically nor semantically valid SQL statements. It
-        will accept as a "valid" statement any string starting with a non whitespace and ended by ';' 
+        Note: this method doesn't check for sintactically nor semantically valid SQL statements.
     """
-    direct_statement = [ get_sql_statements_from_contents(sts) for sts in args['statement'] ]
-    filed_statement =  [ get_sql_statements_from_file(sts) for sts in args['file'] ]
     statements = []
-    for sts in direct_statement + filed_statement:
-        statements.extend(sts)
-    if statements:
-        return statements
-    print_error_and_exit("Not proper SQL statement has been specified")
+    for option_string, value in pairs:
+        assert option_string in [ '-s', '-f' ]
+        raw_statement = value if option_string == '-s' else pathlib.Path(value).read_text()
+        statements.extend(split_statements(raw_statement))
+    return statements
 
-
-def get_sql_statements_from_contents(contents):
-    """ returns a list of SQL statements found in contents
-
-        A valid SQL statement in this context is a string started by a non whitespace and ended by ';'
-
-        Lines starting by ^\s*-- are considered comments and ignored
-
-        In case there's no valid SELECT statement, it returns None
+def split_statements(contents):
+    """ given a string containing zero or more SQL statements, it returns a list with each statement.
+        Have into account that:
+        - substrings starting by -- are ignored up to \n or $
+        - statements are considered to end with ; or $
+        - resulting statements will be strimmed (whitespaces removed from start+end) and always will end by ;
+        - no further sintactic nor semantic analisys will be performed on the statements
     """
     contents_without_comments = " ".join(re.sub('--.*', '', s) for s in contents.split(os.linesep))
     sentences_from_semicolon = [ s + ';' for s in contents_without_comments.split(';') if len(s.strip())>0 ]
     sentences_from_newline = [ s.split(os.linesep) for s in sentences_from_semicolon ]
     return [ s.strip() for s in itertools.chain.from_iterable(sentences_from_newline) if len(s.strip())>0 ]
 
-
-def get_sql_statements_from_file(path):
-    """ returns the last SELECT statement from the specified file in path.
-        In case there's not such a statement, it returns None
-        It is assumed the file does exist """
-    contents = pathlib.Path(path).read_text()
-    statements = get_sql_statements_from_contents(contents)
-    return statements[-1] if statements else None
-
-
 def get_db(args):
-    """ given the arguments already validated, it returns the db connection containing all the data """
-    if args.get('database', None):
-         db_name = args['database']
-    else:
-         db_name = ':memory:'
+    """  given the arguments namespace, it returns the corresponding db connection.
+         In case db_spec == None, the connection is on memory """
+    db_name = args.database if args.database else ':memory:'
     db = sqlite3.connect(db_name)
-    if args.get('input', None):
-        csvsql.import_csv_list(db, args['input'])
+    if args.input:
+        csvsql.import_csv_list(db, args.input)
     return db
 
 

@@ -3,14 +3,7 @@ Currently
 
 - testing case -db
 
-  (done) Problem: when database doesn't exists, it should create one instead of complaining it is not
-  there!
-
-  (done) Problem: it is not inserting properly. Maybe there's a problem with more than one statement!
-
-  (done) implementing a check of --database integrity
-
-  on test_process_cml_args_multiple_statement_sources()
+  (done) on test_process_cml_args_multiple_statement_sources()
   The problem with this test is that it requires a sequential processing of statements as defined in
   this enhancement:
 
@@ -79,6 +72,8 @@ Enhancements
 ============
 
 - (done) allow --input to accept multiple filenames
+
+- allow ignoring block statements /* */
 
 - some optimizations:
 
