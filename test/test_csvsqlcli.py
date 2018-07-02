@@ -176,6 +176,30 @@ def test_process_cml_args_when_multiple_entries_on_same_input_option(tmpdir):
     assert output_file_path.read_text() == expected_output
 
 
+def test_process_cml_args_with_multiple_statements_not_ended_by_semicolon(tmpdir):
+    tmppath = pathlib.Path(str(tmpdir.realpath()))
+    out_path = pathlib.Path(tmppath) / 'outputfile.csv'
+    clargs = [ 'csvsqlcli.py',
+               '-s', 'create table mytable (one, two, three)', 
+               '-s', 'insert into mytable values (1, 2, 3)',
+               '-s', 'select one from mytable',
+               '-o', str(out_path)]
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    expected_output = 'one\n1\n'
+    assert out_path.read_text() == expected_output
+
+def test_process_cml_args_with_multiple_statements_in_one_s(tmpdir):
+    tmppath = pathlib.Path(str(tmpdir.realpath()))
+    out_path = pathlib.Path(tmppath) / 'outputfile.csv'
+    clargs = [ 'csvsqlcli.py',
+               '-s', 'create table mytable (one, two, three); insert into mytable values (1, 2, 3); select one from mytable',
+               '-o', str(out_path)]
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    expected_output = 'one\n1\n'
+    assert out_path.read_text() == expected_output
+
+
+
 def test_process_cml_args_with_database(tmpdir):
     tmppath = pathlib.Path(str(tmpdir.realpath()))
     db_path = pathlib.Path(tmppath) / 'mydb.sqlite3'
@@ -221,5 +245,41 @@ def test_process_cml_args_multiple_statement_sources(tmpdir):
                '-s', 'select * from anothertable;',
                ]
     expected_output = 'one,two\n1,2\n4,5\n'
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    assert pathlib.Path(str(fout.realpath())).read_text() == expected_output
+
+def test_process_cml_args_multiple_files_in_same_f(tmpdir):
+    fin_contents = "one,two,three\n1,2,3\n"
+    fin = tmpdir.join('mytable.csv')
+    fin.write(fin_contents)
+    contents_f1 = "insert into mytable values (4, 5, 6);"
+    fstatements1 = tmpdir.join('statements01.sql')
+    fstatements1.write(contents_f1)
+    contents_f2 = "create table anothertable (one, two);" \
+                  "insert into anothertable select one, two from mytable;"
+    fstatements2 = tmpdir.join('statements02.sql')
+    fstatements2.write(contents_f2)
+    fout = tmpdir.join('outputfile.csv')
+    clargs = [ 'csvsqlcli.py',
+               '-o', str(fout.realpath()),
+               '-i', str(fin.realpath()),
+               '-f', str(fstatements1.realpath()), str(fstatements2.realpath()),
+               '-s', 'select * from anothertable;',
+               ]
+    expected_output = 'one,two\n1,2\n4,5\n'
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    assert pathlib.Path(str(fout.realpath())).read_text() == expected_output
+
+
+def test_process_cml_args_for_input_containing_less_headers_than_columns(tmpdir):
+    contents = "one,two,three\n1,2,3\n4,5,6,7\n8,9,10,11,12\n13,14"
+    fin = tmpdir.join('mytable.csv')
+    fin.write(contents)
+    expected_output = "one,two,three,COL4,COL5\n1,2,3,,\n4,5,6,7,\n8,9,10,11,12\n13,14,,,\n"
+    fout = tmpdir.join('outputfile.csv')
+    clargs = [ 'csvsqlcli.py',
+               '-o', str(fout.realpath()),
+               '-i', str(fin.realpath()),
+               '-s', 'select * from mytable' ]
     csvsqlcli.csvsql_process_cml_args(clargs)
     assert pathlib.Path(str(fout.realpath())).read_text() == expected_output

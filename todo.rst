@@ -13,6 +13,20 @@ Currently
     argument in the reading order.
 
 
+  - testing  test_process_cml_args_for_input_containing_less_headers_than_columns()
+
+    This case is a little bit tricky. It requires processing the whole
+    contents of each input prior to introduce the contents into sqlite, so
+    it is possible to know those rows containing more or less columns than
+    the ones provided in the header
+    For small files as input, it is not a problem: just process the whole
+    contents and get the max columns. BUT for streams and for huge files,
+    such approach could be inappropiate. Instead, you can process row by
+    row and, in case you find:
+    - less columns than expected, you can fill the gaps with empty values
+    - mode columns than expected, you can alter table and add further
+      columns. Have into account that existing rows should expand
+      accordingly
 
 ToDo
 ====
@@ -34,19 +48,19 @@ ToDo
 
   - (done) case fake --database
 
-  - case multiple statements in -s
+  - (done) case multiple statements in -s
 
-  - case multiple files in -f
+  - (done) case multiple files in -f
 
-  - case multiple inputs in -i
+  - (done) case multiple inputs in -i
 
-  - grat order in -s then -f statements
+  - (dismised) grat order in -s then -f statements
 
   - case csv is not sound (e.g. some rows have extra or fewer columns),
 
-  - case intermediate storage '-f' o '--db'
+  - (done) case intermediate storage '-f' o '--db'
 
-  - case more than one 'input'¡
+  - (done) case more than one 'input'¡
 
 
 - define package
