@@ -275,7 +275,7 @@ def test_process_cml_args_for_input_containing_less_headers_than_columns(tmpdir)
     contents = "one,two,three\n1,2,3\n4,5,6,7\n8,9,10,11,12\n13,14"
     fin = tmpdir.join('mytable.csv')
     fin.write(contents)
-    expected_output = "one,two,three,COL4,COL5\n1,2,3,,\n4,5,6,7,\n8,9,10,11,12\n13,14,,,\n"
+    expected_output = "one,two,three,__COL4,__COL5\n1,2,3,,\n4,5,6,7,\n8,9,10,11,12\n13,14,,,\n"
     fout = tmpdir.join('outputfile.csv')
     clargs = [ 'csvsqlcli.py',
                '-o', str(fout.realpath()),

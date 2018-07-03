@@ -3,64 +3,21 @@ Currently
 
 - testing case -db
 
-  (done) on test_process_cml_args_multiple_statement_sources()
-  The problem with this test is that it requires a sequential processing of statements as defined in
-  this enhancement:
-
-  - allow the execution of statements in the exact order given in the arg line. Now it is grouping
-    first the -i and then the -f because you don't know how to separate them. It probably will have
-    to do with the argparse.Action definition that could use a "global" list to append each
-    argument in the reading order.
-
-
-  - testing  test_process_cml_args_for_input_containing_less_headers_than_columns()
+  - (done) testing  test_process_cml_args_for_input_containing_less_headers_than_columns()
 
     This case is a little bit tricky. It requires processing the whole
     contents of each input prior to introduce the contents into sqlite, so
     it is possible to know those rows containing more or less columns than
     the ones provided in the header
-    For small files as input, it is not a problem: just process the whole
-    contents and get the max columns. BUT for streams and for huge files,
-    such approach could be inappropiate. Instead, you can process row by
-    row and, in case you find:
-    - less columns than expected, you can fill the gaps with empty values
-    - mode columns than expected, you can alter table and add further
-      columns. Have into account that existing rows should expand
-      accordingly
 
 ToDo
 ====
 
-- (done) consider if it has sense to use options 'use' and 'db'. Maybe it is enough with 'db' since both
-  allow the use of a single sqlite db and it can be modified by the statements to execute
-  Then, the validations would change: if 'db' doesn't already exist, at least one --input should be
-  defined.
-
-  (done) That also could be reconsidered, since there could be statements not requiring data!
-  So, --db could be replaced by --use and none --use nor --input should be required. Just the
-  statements. Statements will fail when accessing to unnexisting tables, just as it does when that
-  happens with tables not included in the --use or --input!
 
 - test csvsqlcli
 
 
-  - (done) case 'db'
-
-  - (done) case fake --database
-
-  - (done) case multiple statements in -s
-
-  - (done) case multiple files in -f
-
-  - (done) case multiple inputs in -i
-
-  - (dismised) grat order in -s then -f statements
-
   - case csv is not sound (e.g. some rows have extra or fewer columns),
-
-  - (done) case intermediate storage '-f' o '--db'
-
-  - (done) case more than one 'input'¡
 
 
 - define package
@@ -74,8 +31,6 @@ ToDo
 
 - edit readme.md
 
-- (done) create a new repo at github and 
-  
 - push csvsql to github
 
   Don't forget to thank original author!
@@ -84,8 +39,6 @@ ToDo
 
 Enhancements
 ============
-
-- (done) allow --input to accept multiple filenames
 
 - allow ignoring block statements /* */
 
@@ -124,3 +77,17 @@ Enhancements
   - currently, csvsql is not performing transactions on execute_statements() but it could! It is
     probably easier to allow it as part of the list of statements but, by now I'm not sure it is
     possible to rollback 
+
+  - (done) Currently csvsqlcli is using a lot of memory. One of the places is to
+    check for consistent csv input. It reads the whole input file twice to
+    get the maximum number of columns
+    For small files as input, it is not a problem: just process the whole
+    contents and get the max columns. BUT for streams and for huge files,
+    such approach could be inappropiate. Instead, you can process row by
+    row and, in case you find:
+    - less columns than expected, you can fill the gaps with empty values
+    - mode columns than expected, you can alter table and add further
+      columns. Have into account that existing rows should expand
+      accordingly
+
+

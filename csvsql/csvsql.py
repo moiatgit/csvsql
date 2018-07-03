@@ -13,7 +13,9 @@ def import_csv(db, contents_fileobject, table_name, dialect=csv.excel):
     """ Imports the contents into a table named table_name in db
 
         db: a connection to the database
+
         contents_fileobject: a file object containing the csv contents
+
         table_name: the name of the table where to store the contents. If the table already
                     exists, its former contents will be overwritten
     """
@@ -22,7 +24,7 @@ def import_csv(db, contents_fileobject, table_name, dialect=csv.excel):
     source_headers = next(reader, None)
     column_counter = 0
     default_column_name = _DEFAULT_COLUMN_NAME + "%%0%sd"%len(str(len(source_headers)))
-    def normalize_column_name(source_column_name):
+    def normalize_column_name(source_column_name=''):
         """ given the name of the column as found in the csv source, it returns a normalized
             version. This normalization consists on:
             - if the source_column_name is not empty, it is accepted as the normalized name
@@ -37,9 +39,13 @@ def import_csv(db, contents_fileobject, table_name, dialect=csv.excel):
     db.execute('drop table if exists %s;' % table_name)
     db.execute('create table %s (%s);' % (table_name, colstr))
     for row in reader:
-        params = ','.join('?' for i in range(len(row)))
+        while len(row) > column_counter:
+            new_column = normalize_column_name()
+            db.execute('alter table %s add column %s'%(table_name, new_column))
+        values = row + [ '' ] * (column_counter - len(row))
+        params = ','.join('?' for i in range(column_counter))
         sql = 'insert into %s values (%s);' % (table_name, params)
-        db.execute(sql, row)
+        db.execute(sql, values)
     db.commit()
 
 
