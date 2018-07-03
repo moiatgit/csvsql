@@ -283,3 +283,38 @@ def test_process_cml_args_for_input_containing_less_headers_than_columns(tmpdir)
                '-s', 'select * from mytable' ]
     csvsqlcli.csvsql_process_cml_args(clargs)
     assert pathlib.Path(str(fout.realpath())).read_text() == expected_output
+
+def test_process_cml_args_for_union_of_two_inputs(tmpdir):
+    """ This test case is addapted from querycsv original tests test_query_csv2 """
+    contents_foo = 'a, b, c\n1,2,3\n'
+    contents_bar = 'a, b, c\n4,5,6\n'
+    fin_foo = tmpdir.join('foo.csv')
+    fin_bar = tmpdir.join('bar.csv')
+    fout = tmpdir.join('outputfile.csv')
+    output_file_path = pathlib.Path(str(tmpdir.realpath())) / 'outputfile.csv'
+    fin_foo.write(contents_foo)
+    fin_bar.write(contents_bar)
+    clargs = [ 'csvsqlcli.py', 
+               '-i', str(fin_foo.realpath()), str(fin_bar.realpath()), 
+               '-o', str(fout.realpath()), 
+               '-s', 'select * from foo union all select * from bar' ]
+    expected_output = 'a,b,c\n1,2,3\n4,5,6\n'
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    assert output_file_path.read_text() == expected_output
+
+
+def test_process_cml_args_for_union_of_two_inputs(tmpdir):
+    """ This test case is addapted from querycsv original tests test_query_csv3 """
+    contents_foo = 'a, b, c\n1,2,3\n4,5,6\n'
+    fin_foo = tmpdir.join('foo.csv')
+    fout = tmpdir.join('outputfile.csv')
+    output_file_path = pathlib.Path(str(tmpdir.realpath())) / 'outputfile.csv'
+    fin_foo.write(contents_foo)
+    clargs = [ 'csvsqlcli.py', 
+               '-i', str(fin_foo.realpath()),
+               '-o', str(fout.realpath()), 
+               '-s', 'update foo set a=(a+b+c); select a from foo;' ]
+    expected_output = 'a\n6\n15\n'
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    assert output_file_path.read_text() == expected_output
+

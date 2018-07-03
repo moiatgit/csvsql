@@ -17,7 +17,9 @@ ToDo
 - test csvsqlcli
 
 
-  - case csv is not sound (e.g. some rows have extra or fewer columns),
+  - (done) case csv is not sound (e.g. some rows have extra or fewer columns),
+
+  - (done) resque test cases from csvquery
 
 
 - define package
@@ -42,6 +44,9 @@ Enhancements
 
 - allow ignoring block statements /* */
 
+- allow specifying the headers of an input file. That is, consider that
+  the file doesn't contain headers.
+
 - some optimizations:
 
   - db.commit() only when non SELECT statement is present
@@ -53,6 +58,11 @@ Enhancements
   - allow the specification of tables in FROM clausules to infer the .csv files even if not present
     in the --input args. That would make sense specially when definining some set of folders
     containing .csv that compose the .csv database. Something like a CSVSQLPATH env var.
+
+    Alternativelly, a new option --folder could be added to specify
+    multiple folders containing .csv files. These files shoudln't be
+    loaded unleast they appear in a FROM clausule
+
 
   - if you keep the results of each statement just to show the last one, you might be keeping a lot
     of data in memory for nothing! In fact, just the last statement could simply be too much for big
@@ -89,5 +99,4 @@ Enhancements
     - mode columns than expected, you can alter table and add further
       columns. Have into account that existing rows should expand
       accordingly
-
 
