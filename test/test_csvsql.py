@@ -34,15 +34,15 @@ def test_import_csv_unheaded_cols():
 
 
 def test_import_csv_list(monkeypatch):
-    files ={ 
-            'f1.csv': 'a,b,c\n1,2,3\n4,5,6', 
-            'f2.csv': 'one,two,three\na,b,c\nd,e,f', 
-            'f3.csv': 'un,dos,tres\na,2,3\nb,2,3'     
+    files ={
+            'f1.csv': 'a,b,c\n1,2,3\n4,5,6',
+            'f2.csv': 'one,two,three\na,b,c\nd,e,f',
+            'f3.csv': 'un,dos,tres\na,2,3\nb,2,3'
             }
     monkeypatch.setattr(pathlib.Path, 'open', lambda self_: io.StringIO(files[self_.name]))
     db = sqlite3.connect(':memory:')
     dialect = csv.excel
-    csvsql.import_csv_list(db, files.keys())
+    csvsql.import_csv_list(db, [ ('-i', pathlib.Path(f)) for f in files.keys() ])
     for filename in files.keys():
         assert_table_contains_csv_contents(db, filename[:-4], files[filename])
 

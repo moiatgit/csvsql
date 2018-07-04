@@ -49,12 +49,14 @@ def import_csv(db, contents_fileobject, table_name, dialect=csv.excel):
     db.commit()
 
 
-def import_csv_list(db, filenames):
-    """ imports the contents of the filenames 
-        Filenames is a list of paths to csv files
+def import_csv_list(db, pairs_type_path):
+    """ imports the contents of the paths in pairs
+
+        pairs_type_path: a list of tuples (option_string, path) where path is a pathlib
+        expected to corresponds to a csv files, and option_string allows to decide whether the file
+        contains '-i' or not '-u' a header row
     """
-    for filename in filenames:
-        path = pathlib.Path(filename)
+    for option_string, path in pairs_type_path:
         table_name = path.stem
         with path.open() as fo:
             import_csv(db, fo, table_name)

@@ -1,14 +1,14 @@
 Currently
 =========
 
-- testing case -db
+- adding -u (--unheadded) functionality that allows specifying inputs
+  without header and --header that allows to specify a replacement header
+  for the previous input
 
-  - (done) testing  test_process_cml_args_for_input_containing_less_headers_than_columns()
-
-    This case is a little bit tricky. It requires processing the whole
-    contents of each input prior to introduce the contents into sqlite, so
-    it is possible to know those rows containing more or less columns than
-    the ones provided in the header
+  - (done) store input files in tuples (path, hasHeader)
+  - add -u option and store unheaded files in tuples (path, unheaded)
+  - store input/unheaded files in tuples (path, hasHeader|unheaded, newHeader)
+    for newHeader the one specified with the --header option
 
 ToDo
 ====
@@ -16,6 +16,9 @@ ToDo
 
 - test csvsqlcli
 
+  - test expanded options. For example --statement and --file, so it is
+    possible that the way their values are stored doesn't work properly
+    with the option_string
 
   - (done) case csv is not sound (e.g. some rows have extra or fewer columns),
 

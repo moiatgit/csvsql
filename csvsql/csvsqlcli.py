@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 """
-    csvsqlcli is a program that allows executing SQL statements on csv files.
+    csvsqlcli is a command line program that allows executing SQL statements on csv files.
 
     Licensed under the GNU General Public License version 3.
 
@@ -31,7 +31,6 @@ import io
 import tempfile
 import csv
 import sqlite3
-
 import csvsql
 
 # Current version of this cli
@@ -43,42 +42,42 @@ class CsvSqlArgParser(argparse.ArgumentParser):
 
         It defines two actions: 'extend' and 'extend_unique' """
 
-    class ExtendAction(argparse.Action):
-        """ This class defines an action, similar to 'append' that allows argparse to collect multiple
-        args for the same option in a flat list. i.e.
-
-        Example: "-i one two -i three" would generate with 'append' the list [['one', 'two'], ['three']]
-        'ExtendAction will return ['one', 'two', 'three'] instead
-
-        Note: solution found at https://stackoverflow.com/questions/41152799/argparse-flatten-the-result-of-action-append
+    class StatementCollector(argparse.Action):
+        """ This class defines an action that composes a list of tuples
+        (option_string, value) and appends them to the attribute name 'pairs_'
+        in the received order.
+        path values are converted to pathlib.Path
         """
         def __call__(self, parser, namespace, values, option_string=None):
             items = getattr(namespace, self.dest) or []
-            items.extend(values)
+            items.extend((option_string, pathlib.Path(v) if option_string == '-f' else v ) for v in values)
             setattr(namespace, self.dest, items)
 
-    class ExtendActionUnique(argparse.Action):
-        """ This class defines an action, similar to ExtendAction but removing repeated input. It
-        preserves the original order.
-        Example: "-i one two one -i two three -i three four" would generate [ 'one', 'two', 'three', 'four' ]
+    class InputCollector(argparse.Action):
+        """ This class defines an action, similar to StatementCollector but removing repeated input.
+        It preserves the original order.
+        Values are converted to pathlib.Path
         """
         def __call__(self, parser, namespace, values, option_string=None):
             items = getattr(namespace, self.dest) or []
-            items.extend(v for v in values if v not in items)
+            items.extend( (option_string, pathlib.Path(v)) for v in values if (option_string, v) not in items)
             setattr(namespace, self.dest, items)
 
-    class CollectPairsOptionValue(argparse.Action):
-        """ This class defines an action that composes a list of tuples (option_string, value) and appends them to the attribute name 'pairs_' in the received order """
+    class PathCollector(argparse.Action):
+        """ This class defines an action, that considers the value as a string containing a path
+            and stores the value as a pathlib.Path
+        """
         def __call__(self, parser, namespace, values, option_string=None):
-            items = getattr(namespace, self.dest) or []
-            items.extend((option_string, v) for v in values)
-            setattr(namespace, self.dest, items)
+            path = pathlib.Path(values)
+            setattr(namespace, self.dest, path)
+
+
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register('action', 'extend', CsvSqlArgParser.ExtendAction)
-        self.register('action', 'extend_unique', CsvSqlArgParser.ExtendActionUnique)
-        self.register('action', 'collect_pairs', CsvSqlArgParser.CollectPairsOptionValue)
+        self.register('action', 'collect_path', CsvSqlArgParser.PathCollector)
+        self.register('action', 'collect_statements', CsvSqlArgParser.StatementCollector)
+        self.register('action', 'collect_inputs', CsvSqlArgParser.InputCollector)
 
     def error(self, message):
         """ Prints help message on parsing error """
@@ -95,6 +94,7 @@ def csvsql_process_cml_args(clargs):
     args = get_args(parser, clargs[1:])
     statements = get_statements(args.statements)
     db = get_db(args)
+    load_input(db, args.input)
     try:
         results = csvsql.execute_statements(db, statements)[-1] # just results for the last statement
     except sqlite3.OperationalError as err:
@@ -112,9 +112,11 @@ def get_argparse(program_name):
                                                             "SQL statements on csv files.")
     parser.add_argument('-v', '--version', action='version', version='%s version %s'%(program_name, _VERSION))
     parser.add_argument("-d", "--database",
+            action="collect_path",
             help="Use the specified sqlite file as intermediate storage. If the file does not exist, it will be created.")
     parser.add_argument("-i", "--input",
-            action="extend_unique", 
+            action="collect_inputs", 
+            dest="input",
             nargs='+',
             default = [],
             help="Input csv filename. Multiple -i options can be used to specify more than one input file."
@@ -123,13 +125,14 @@ def get_argparse(program_name):
                  ". On pre-existing tables, the previous contents will be overriden (not merged) "
                  "without warning.")
     parser.add_argument("-o", "--output",
+            action="collect_path",
             help="Send output to this csv file. The file must not exist unleast --force is specified.")
     parser.add_argument("--force", 
                         default=False,
                         action='store_false',
                         help="Allows to override --output filename if already present.")
     parser.add_argument("-f", "--file",
-            action = "collect_pairs",
+            action = "collect_statements",
             dest = 'statements',
             nargs='+',
             default = [],
@@ -137,7 +140,7 @@ def get_argparse(program_name):
                  "specify more than one statement sources. Each statement will be executed sequentially in the "
                  "specified order.")
     parser.add_argument("-s", "--statement",
-            action = "collect_pairs",
+            action = "collect_statements",
             dest = 'statements',
             nargs='+',
             default = [],
@@ -169,28 +172,13 @@ def get_args(parser, clargs):
         if pathlib.Path(args.output).is_file() and not args.force:
             print_error_and_exit("File %s already exists. Remove it or use --force option"%args.output)
 
-    for path in args.input + [ path for option, path in args.statements if option == '-f']:
-        assert_file_exists(path)
-
-    if args.database:
-        if pathlib.Path(args.database).is_file():
-            assert_valid_database(args.database)
+    paths = [ path for _, path in args.input ] +    \
+            [ path for option, path in args.statements if option == '-f']
+    for path in paths:
+        if not path.is_file():
+            print_error_and_exit("File %s not found"%path)
 
     return args
-
-def assert_valid_database(path):
-    """ Asserts path is a file containing a valid sqlite3 database """
-    db = sqlite3.connect(path)
-    try:
-        result = csvsql.execute_statement(db, 'pragma integrity_check;')
-    except sqlite3.DatabaseError as err:
-        print_error_and_exit("Problems found with %s: %s"%(path, err))
-    db.close()
-
-def assert_file_exists(path):
-    """ Asserts path is an existing file. Otherwise, displays an error and stops execution """
-    if not pathlib.Path(path).is_file():
-        print_error_and_exit("File %s not found"%path)
 
 
 def get_statements(pairs):
@@ -225,11 +213,26 @@ def split_statements(contents):
 
 def get_db(args):
     """  given the arguments namespace, it returns the corresponding db connection.
+         In case db_spec doesn't correspond to a valid sqlite3 database, it issues an error and stops execution
          In case db_spec == None, the connection is on memory """
-    db_name = args.database if args.database else ':memory:'
-    db = sqlite3.connect(db_name)
-    if args.input:
-        csvsql.import_csv_list(db, args.input)
+    if args.database:
+        db_name = str(args.database)
+        db = sqlite3.connect(db_name)
+        try:
+            result = csvsql.execute_statement(db, 'pragma integrity_check;')
+        except sqlite3.DatabaseError as err:
+            print_error_and_exit("Problems found with %s: %s"%(db_name, err))
+    else:
+        db_name = ':memory:'
+        db = sqlite3.connect(db_name)
+    return db
+
+def load_input(db, files=None):
+    """ given an open connection to a database and a list of input files (pairs
+    option_string, pathlib.Path), it loads the data contained in the files onto
+    the database """
+    if files:
+        csvsql.import_csv_list(db, files)
     return db
 
 
@@ -240,7 +243,7 @@ def write_output(results, destination=None, dialect=csv.excel):
         destination: is the name of the file where to store the results. When None, standard output
         is assumed
     """
-    fs = open(destination, 'w') if destination else sys.stdout
+    fs = destination.open('w') if destination else sys.stdout
     csv.writer(fs, dialect=dialect).writerows(results)
     if destination:
         fs.close()
