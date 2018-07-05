@@ -11,7 +11,7 @@ setuptools.setup(
         description = "API to allow execution of SQL statements on csv files",
         long_description = long_description,
         long_description_content_type = "text/markdown",
-        url = "https://github.com/moiatgit/csvsql.git",
+        url = "https://github.com/moiatgit/csvsql",
         packages = setuptools.find_packages(),
         classifiers = (
             "Programming Language :: Python :: 3.5",
