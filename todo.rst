@@ -16,7 +16,7 @@ ToDo
 
 - test csvsqlcli
 
-  - test expanded options. For example --statement and --file, so it is
+  - (done) test expanded options. For example --statement and --file, so it is
     possible that the way their values are stored doesn't work properly
     with the option_string
 

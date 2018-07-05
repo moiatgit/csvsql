@@ -49,8 +49,9 @@ class CsvSqlArgParser(argparse.ArgumentParser):
         path values are converted to pathlib.Path
         """
         def __call__(self, parser, namespace, values, option_string=None):
+            option = min(self.option_strings, key=len)
             items = getattr(namespace, self.dest) or []
-            items.extend((option_string, pathlib.Path(v) if option_string == '-f' else v ) for v in values)
+            items.extend((option, pathlib.Path(v) if option == '-f' else v ) for v in values)
             setattr(namespace, self.dest, items)
 
     class InputCollector(argparse.Action):
@@ -59,8 +60,9 @@ class CsvSqlArgParser(argparse.ArgumentParser):
         Values are converted to pathlib.Path
         """
         def __call__(self, parser, namespace, values, option_string=None):
+            option = min(self.option_strings, key=len)
             items = getattr(namespace, self.dest) or []
-            items.extend( (option_string, pathlib.Path(v)) for v in values if (option_string, v) not in items)
+            items.extend( (option, pathlib.Path(v)) for v in values if (option, v) not in items)
             setattr(namespace, self.dest, items)
 
     class PathCollector(argparse.Action):

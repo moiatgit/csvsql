@@ -46,15 +46,6 @@ def test_split_statements_ignoring_newlines_within():
     result = csvsqlcli.split_statements(contents)
     assert result == expected
 
-#def test_split_statements_ignoring_comment_blocks():
-#    statements = [ "SELECT * FROM mytable;", "select col1 FROM mytable;", "select col1,col2 FROM mytable where col1=col2;" ]
-#    contents = "/* SELECT * \nFROM anyothertable;*/" + "\n".join(statements[:-1]) + "/* -- another comment to ignore\n*/" + statements[-1]
-#    expected = statements
-#    result = csvsqlcli.split_statements(contents)
-#    assert result == expected
-
-
-
 def test_process_cml_args_no_args_provided(capsys):
     clargs = [ 'csvsqlcli.py' ]
     with pytest.raises(SystemExit):
@@ -215,6 +206,27 @@ def test_process_cml_args_with_database(tmpdir):
                '-o', str(out_path)]
     csvsqlcli.csvsql_process_cml_args(clargs)
     expected_output = 'one\n1\n'
+    assert out_path.read_text() == expected_output
+
+def test_process_cml_args_with_database_expanded_options(tmpdir):
+    fin_contents = "one,two,three\n4,5,6\n"
+    fin = tmpdir.join('myoutertable.csv')
+    fin.write(fin_contents)
+    tmppath = pathlib.Path(str(tmpdir.realpath()))
+    db_path = pathlib.Path(tmppath) / 'mydb.sqlite3'
+    out_path = pathlib.Path(tmppath) / 'outputfile.csv'
+    clargs = [ 'csvsqlcli.py',
+               '--database', str(db_path),
+               '--statement', 'create table myinnertable (one, two, three);', 
+               '--statement', 'insert into myinnertable values (1, 2, 3);' ]
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    clargs = [ 'csvsqlcli.py',
+               '--database', str(db_path),
+               '--input', str(fin.realpath()),
+               '--statement', 'select * from myinnertable union all select * from myoutertable',
+               '--output', str(out_path)]
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    expected_output = 'one,two,three\n1,2,3\n4,5,6\n'
     assert out_path.read_text() == expected_output
 
 
