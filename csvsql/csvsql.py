@@ -9,21 +9,23 @@ import pathlib
 _DEFAULT_COLUMN_NAME = '__COL'
 
 
-def import_csv(db, contents_fileobject, table_name, dialect=csv.excel):
+def import_csv(db, contents_fileobject, table_name, dialect=csv.excel, header=None):
     """ Imports the contents into a table named table_name in db
 
         db: a connection to the database
 
         contents_fileobject: a file object containing the csv contents
 
+        header is a str that defines the headers when different to None
+
         table_name: the name of the table where to store the contents. If the table already
                     exists, its former contents will be overwritten
     """
 
     reader = csv.reader(contents_fileobject, dialect)
-    source_headers = next(reader, None)
+    source_headers = next(reader, None) if header == None else header.split(',')
     column_counter = 0
-    default_column_name = _DEFAULT_COLUMN_NAME + "%%0%sd"%len(str(len(source_headers)))
+    default_column_name = _DEFAULT_COLUMN_NAME + "%d"
     def normalize_column_name(source_column_name=''):
         """ given the name of the column as found in the csv source, it returns a normalized
             version. This normalization consists on:
@@ -57,9 +59,11 @@ def import_csv_list(db, pairs_type_path):
         contains '-i' or not '-u' a header row
     """
     for option_string, path in pairs_type_path:
+        assert option_string in ['-i', '-u']
         table_name = path.stem
+        header = '' if option_string == '-u' else None
         with path.open() as fo:
-            import_csv(db, fo, table_name)
+            import_csv(db, fo, table_name, header=header)
 
 def execute_statement(db, statement):
     """ executes an sql statement on db and returns the results """

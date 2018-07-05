@@ -24,7 +24,7 @@ def test_import_csv_unheaded_cols():
     rows = [ ( '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12' ) ]
     contents = "%s\n%s"%(",".join(headers), "\n".join((",".join(row) for row in rows)))
     contents_fileobject = io.StringIO(contents)
-    expected_headers = [ 'un', '__COL02', 'tres' ] + [ '__COL%02d'%i for i in range(4, 12) ] + [ 'dotze']
+    expected_headers = [ 'un', '__COL2', 'tres' ] + [ '__COL%d'%i for i in range(4, 12) ] + [ 'dotze']
     expected_contents = "%s\n%s"%(",".join(expected_headers), "\n".join((",".join(row) for row in rows)))
     table_name = "my_table"
     db = sqlite3.connect(':memory:')

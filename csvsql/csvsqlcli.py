@@ -121,9 +121,21 @@ def get_argparse(program_name):
             dest="input",
             nargs='+',
             default = [],
-            help="Input csv filename. Multiple -i options can be used to specify more than one input file."
+            help="Input csv filename. The first row is assumed to be the "
+                  "headers. Multiple -i options can be used to specify more than one input file."
                  "Duplications will be ignored. In case --database is specified, the contents of "
-                 "--input files will be stored in the database, as tables named after the file name"
+                 "-i files will be stored in the database, as tables named after the file name"
+                 ". On pre-existing tables, the previous contents will be overriden (not merged) "
+                 "without warning.")
+    parser.add_argument("-u", "--unheaded",
+            action="collect_inputs",
+            dest="input",
+            nargs='+',
+            default=[],
+            help="Input csv filename. The file doesn't contain headers. "
+                  "Multiple -u options can be used to specify more than one input file."
+                 "Duplications will be ignored. In case --database is specified, the contents of "
+                 "-u files will be stored in the database, as tables named after the file name"
                  ". On pre-existing tables, the previous contents will be overriden (not merged) "
                  "without warning.")
     parser.add_argument("-o", "--output",

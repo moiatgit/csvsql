@@ -6,9 +6,10 @@ Currently
   for the previous input
 
   - (done) store input files in tuples (path, hasHeader)
-  - add -u option and store unheaded files in tuples (path, unheaded)
+  - (done) add -u option and store unheaded files in tuples (path, unheaded)
   - store input/unheaded files in tuples (path, hasHeader|unheaded, newHeader)
     for newHeader the one specified with the --header option
+  - allow spec output without headers
 
 ToDo
 ====
