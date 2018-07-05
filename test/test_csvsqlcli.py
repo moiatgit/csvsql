@@ -46,10 +46,12 @@ def test_split_statements_ignoring_newlines_within():
     result = csvsqlcli.split_statements(contents)
     assert result == expected
 
+
 def test_process_cml_args_no_args_provided(capsys):
     clargs = [ 'csvsqlcli.py' ]
     with pytest.raises(SystemExit):
         csvsqlcli.csvsql_process_cml_args(clargs)
+
 
 def test_process_cml_args_simple_query(capsys, tmpdir):
     contents = 'one,two,three\n1,2,3\n4,5,6'
@@ -61,6 +63,7 @@ def test_process_cml_args_simple_query(capsys, tmpdir):
     captured = capsys.readouterr()
     assert captured[0].replace('\r','') == expected_output
     assert captured[1] == ''
+
 
 def test_process_cml_args_when_non_existing_output_file(capsys, tmpdir):
     contents = 'one,two,three\n1,2,3\n4,5,6'
@@ -77,6 +80,7 @@ def test_process_cml_args_when_non_existing_output_file(capsys, tmpdir):
     captured = capsys.readouterr()
     assert captured[0] == ''
     assert captured[1] == ''
+
 
 def test_process_cml_args_when_output_already_exists_and_forced(capsys, tmpdir):
     contents = 'one,two,three\n1,2,3\n4,5,6'
@@ -96,6 +100,7 @@ def test_process_cml_args_when_output_already_exists_and_forced(capsys, tmpdir):
     assert captured[0] == ''
     assert captured[1] == ''
 
+
 def test_process_cml_args_when_output_already_exists_and_not_forced(capsys, tmpdir):
     contents = 'one,two,three\n1,2,3\n4,5,6'
     mysubdir = tmpdir.mkdir('subdir')
@@ -113,6 +118,82 @@ def test_process_cml_args_when_output_already_exists_and_not_forced(capsys, tmpd
     assert captured[0] == ''
     assert captured[1] != ''
 
+
+def test_process_cml_args_when_non_existing_unheaded_output_file(capsys, tmpdir):
+    contents = 'one,two,three\n1,2,3\n4,5,6'
+    mysubdir = tmpdir.mkdir('subdir')
+    fd = mysubdir.join('myfile.csv')
+    fd.write(contents)
+    output_file_path = pathlib.Path(str(mysubdir.realpath())) / 'outputfile.csv'
+    clargs = [ 'csvsqlcli.py', '-i', str(fd.realpath()),
+                               '--unheadedOutput', str(output_file_path),
+                               '-s', 'select one from myfile;' ]
+    expected_output = '1\n4\n'
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    assert output_file_path.read_text() == expected_output
+    captured = capsys.readouterr()
+    assert captured[0] == ''
+    assert captured[1] == ''
+
+
+def test_process_cml_args_when_unheaded_output_already_exists_and_forced(capsys, tmpdir):
+    contents = 'one,two,three\n1,2,3\n4,5,6'
+    mysubdir = tmpdir.mkdir('subdir')
+    fin = mysubdir.join('myfile.csv')
+    fout = mysubdir.join('outputfile.csv')
+    fin.write(contents)
+    output_file_path = pathlib.Path(str(mysubdir.realpath())) / 'outputfile.csv'
+    clargs = [ 'csvsqlcli.py', '-i', str(fin.realpath()),
+                               '-O', str(output_file_path),
+                               '--force',
+                               '-s', 'select one from myfile;' ]
+    expected_output = '1\n4\n'
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    assert output_file_path.read_text() == expected_output
+    captured = capsys.readouterr()
+    assert captured[0] == ''
+    assert captured[1] == ''
+
+
+def test_process_cml_args_when_unheaded_output_already_exists_and_not_forced(capsys, tmpdir):
+    contents = 'one,two,three\n1,2,3\n4,5,6'
+    mysubdir = tmpdir.mkdir('subdir')
+    fin = mysubdir.join('myfile.csv')
+    fout = mysubdir.join('outputfile.csv')
+    fin.write(contents)
+    fout.write("anything")
+    clargs = [ 'csvsqlcli.py',
+               '-i', str(fin.realpath()),
+               '--unheadedOutput', str(fout.realpath()),
+               '-s', 'select one from myfile;' ]
+    with pytest.raises(SystemExit):
+        csvsqlcli.csvsql_process_cml_args(clargs)
+    captured = capsys.readouterr()
+    assert captured[0] == ''
+    assert captured[1] != ''
+
+
+def test_process_cml_args_when_both_headed_and_unheaded_outputs_do_not_exist(capsys, tmpdir):
+    contents = 'one,two,three\n1,2,3\n4,5,6'
+    mysubdir = tmpdir.mkdir('subdir')
+    fd = mysubdir.join('myfile.csv')
+    fd.write(contents)
+    headed_output_file_path = pathlib.Path(str(mysubdir.realpath())) / 'headed.csv'
+    unheaded_output_file_path = pathlib.Path(str(mysubdir.realpath())) / 'unheaded.csv'
+    clargs = [ 'csvsqlcli.py', '-i', str(fd.realpath()),
+                               '-o', str(headed_output_file_path), 
+                               '-O', str(unheaded_output_file_path),
+                               '-s', 'select one,three from myfile;' ]
+    expected_headed = 'one,three\n1,3\n4,6\n'
+    expected_unheaded = '1,3\n4,6\n'
+    csvsqlcli.csvsql_process_cml_args(clargs)
+    assert headed_output_file_path.read_text() == expected_headed
+    assert unheaded_output_file_path.read_text() == expected_unheaded
+    captured = capsys.readouterr()
+    assert captured[0] == ''
+    assert captured[1] == ''
+
+
 def test_process_cml_args_when_no_input_file(capsys):
     clargs = [ 'csvsqlcli.py', '-s', 'select tbl_name from sqlite_master;' ]
     expected_output = 'tbl_name\n'
@@ -120,6 +201,7 @@ def test_process_cml_args_when_no_input_file(capsys):
     captured = capsys.readouterr()
     assert captured[0].replace('\r','') == expected_output
     assert captured[1] == ''
+
 
 def test_process_cml_args_when_statement_error(capsys):
     clargs = [ 'csvsqlcli.py', '-s', 'select foo from bar;' ]
@@ -179,6 +261,7 @@ def test_process_cml_args_with_multiple_statements_not_ended_by_semicolon(tmpdir
     expected_output = 'one\n1\n'
     assert out_path.read_text() == expected_output
 
+
 def test_process_cml_args_with_multiple_statements_in_one_s(tmpdir):
     tmppath = pathlib.Path(str(tmpdir.realpath()))
     out_path = pathlib.Path(tmppath) / 'outputfile.csv'
@@ -188,7 +271,6 @@ def test_process_cml_args_with_multiple_statements_in_one_s(tmpdir):
     csvsqlcli.csvsql_process_cml_args(clargs)
     expected_output = 'one\n1\n'
     assert out_path.read_text() == expected_output
-
 
 
 def test_process_cml_args_with_database(tmpdir):
@@ -207,6 +289,7 @@ def test_process_cml_args_with_database(tmpdir):
     csvsqlcli.csvsql_process_cml_args(clargs)
     expected_output = 'one\n1\n'
     assert out_path.read_text() == expected_output
+
 
 def test_process_cml_args_with_database_expanded_options(tmpdir):
     fin_contents = "one,two,three\n4,5,6\n"
@@ -237,6 +320,7 @@ def test_process_cml_args_with_non_a_database(tmpdir):
     with pytest.raises(SystemExit):
         csvsqlcli.csvsql_process_cml_args(clargs)
 
+
 def test_process_cml_args_multiple_statement_sources(tmpdir):
     fin_contents = "one,two,three\n1,2,3\n"
     fin = tmpdir.join('mytable.csv')
@@ -259,6 +343,7 @@ def test_process_cml_args_multiple_statement_sources(tmpdir):
     expected_output = 'one,two\n1,2\n4,5\n'
     csvsqlcli.csvsql_process_cml_args(clargs)
     assert pathlib.Path(str(fout.realpath())).read_text() == expected_output
+
 
 def test_process_cml_args_multiple_files_in_same_f(tmpdir):
     fin_contents = "one,two,three\n1,2,3\n"
@@ -296,6 +381,7 @@ def test_process_cml_args_for_input_containing_less_headers_than_columns(tmpdir)
     csvsqlcli.csvsql_process_cml_args(clargs)
     assert pathlib.Path(str(fout.realpath())).read_text() == expected_output
 
+
 def test_process_cml_args_for_union_of_two_inputs(tmpdir):
     """ This test case is addapted from querycsv original tests test_query_csv2 """
     contents_foo = 'a, b, c\n1,2,3\n'
@@ -330,6 +416,7 @@ def test_process_cml_args_for_union_of_two_inputs(tmpdir):
     csvsqlcli.csvsql_process_cml_args(clargs)
     assert output_file_path.read_text() == expected_output
 
+
 def test_process_cml_args_for_unheaded_input(tmpdir):
     contents= '1,2,3\n4,5,6\n'
     fin = tmpdir.join('mytable.csv')
@@ -343,6 +430,7 @@ def test_process_cml_args_for_unheaded_input(tmpdir):
     expected_output = '__COL1,__COL2,__COL3\n1,2,3\n4,5,6\n'
     csvsqlcli.csvsql_process_cml_args(clargs)
     assert output_file_path.read_text() == expected_output
+
 
 def test_process_cml_args_for_mixed_headed_and_unheaded_inputs(tmpdir):
     contents_headed = 'one,two,three\n1,2,3\n4,5,6\n'
@@ -361,4 +449,5 @@ def test_process_cml_args_for_mixed_headed_and_unheaded_inputs(tmpdir):
     expected_output = 'two,dos\n2,10\n'
     csvsqlcli.csvsql_process_cml_args(clargs)
     assert output_file_path.read_text() == expected_output
+
 

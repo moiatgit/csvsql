@@ -48,6 +48,8 @@ class CsvSqlArgParser(argparse.ArgumentParser):
         in the received order.
         path values are converted to pathlib.Path
         """
+
+
         def __call__(self, parser, namespace, values, option_string=None):
             option = min(self.option_strings, key=len)
             items = getattr(namespace, self.dest) or []
@@ -59,6 +61,8 @@ class CsvSqlArgParser(argparse.ArgumentParser):
         It preserves the original order.
         Values are converted to pathlib.Path
         """
+
+
         def __call__(self, parser, namespace, values, option_string=None):
             option = min(self.option_strings, key=len)
             items = getattr(namespace, self.dest) or []
@@ -69,10 +73,11 @@ class CsvSqlArgParser(argparse.ArgumentParser):
         """ This class defines an action, that considers the value as a string containing a path
             and stores the value as a pathlib.Path
         """
+
+
         def __call__(self, parser, namespace, values, option_string=None):
             path = pathlib.Path(values)
             setattr(namespace, self.dest, path)
-
 
 
     def __init__(self, *args, **kwargs):
@@ -81,10 +86,10 @@ class CsvSqlArgParser(argparse.ArgumentParser):
         self.register('action', 'collect_statements', CsvSqlArgParser.StatementCollector)
         self.register('action', 'collect_inputs', CsvSqlArgParser.InputCollector)
 
+
     def error(self, message):
         """ Prints help message on parsing error """
         print_error_run_function_and_exit("Error: %s"%message, self.print_help)
-
 
 
 def csvsql_process_cml_args(clargs):
@@ -97,13 +102,17 @@ def csvsql_process_cml_args(clargs):
     statements = get_statements(args.statements)
     db = get_db(args)
     load_input(db, args.input)
+    results = execute_statements(db, statements)
+    write_output(results, args)
+    db.close()
+
+
+def execute_statements(db, statements):
+    """ tries to execute the statements and returns the results """
     try:
-        results = csvsql.execute_statements(db, statements)[-1] # just results for the last statement
+        return csvsql.execute_statements(db, statements)[-1] # just results for the last statement
     except sqlite3.OperationalError as err:
         print_error_and_exit("Problems with the statements %s Error: %s"%(statements, err))
-    destination = args.output
-    write_output(results, destination)
-    db.close()
 
 
 def get_argparse(program_name):
@@ -139,6 +148,9 @@ def get_argparse(program_name):
                  ". On pre-existing tables, the previous contents will be overriden (not merged) "
                  "without warning.")
     parser.add_argument("-o", "--output",
+            action="collect_path",
+            help="Send output to this csv file. The file must not exist unleast --force is specified.")
+    parser.add_argument("-O", "--unheadedOutput",
             action="collect_path",
             help="Send output to this csv file. The file must not exist unleast --force is specified.")
     parser.add_argument("--force", 
@@ -186,6 +198,10 @@ def get_args(parser, clargs):
         if pathlib.Path(args.output).is_file() and not args.force:
             print_error_and_exit("File %s already exists. Remove it or use --force option"%args.output)
 
+    if args.unheadedOutput:
+        if pathlib.Path(args.unheadedOutput).is_file() and not args.force:
+            print_error_and_exit("File %s already exists. Remove it or use --force option"%args.unheadedOutput)
+
     paths = [ path for _, path in args.input ] +    \
             [ path for option, path in args.statements if option == '-f']
     for path in paths:
@@ -212,6 +228,7 @@ def get_statements(pairs):
         statements.extend(split_statements(raw_statement))
     return statements
 
+
 def split_statements(contents):
     """ given a string containing zero or more SQL statements, it returns a list with each statement.
         Have into account that:
@@ -224,6 +241,7 @@ def split_statements(contents):
     sentences_from_semicolon = [ s + ';' for s in contents_without_comments.split(';') if len(s.strip())>0 ]
     sentences_from_newline = [ s.split(os.linesep) for s in sentences_from_semicolon ]
     return [ s.strip() for s in itertools.chain.from_iterable(sentences_from_newline) if len(s.strip())>0 ]
+
 
 def get_db(args):
     """  given the arguments namespace, it returns the corresponding db connection.
@@ -241,6 +259,7 @@ def get_db(args):
         db = sqlite3.connect(db_name)
     return db
 
+
 def load_input(db, files=None):
     """ given an open connection to a database and a list of input files (pairs
     option_string, pathlib.Path), it loads the data contained in the files onto
@@ -250,23 +269,32 @@ def load_input(db, files=None):
     return db
 
 
-def write_output(results, destination=None, dialect=csv.excel):
+def write_output(results, args, dialect=csv.excel):
     """ Writes results to output file.
 
         results: is a list of csv rows
-        destination: is the name of the file where to store the results. When None, standard output
-        is assumed
+        args is the parsed arguments potentially containing output and unheadedOutput (even both!)
+
+        In case output and unheadedOutput are both None, it writes to the standard output
+        In case output is specified, it writes in the results
+        In case unheadedOutput is specified, it writes the results except for the first row (the headers)
     """
-    fs = destination.open('w') if destination else sys.stdout
-    csv.writer(fs, dialect=dialect).writerows(results)
-    if destination:
-        fs.close()
+    if not(args.output or args.unheadedOutput):
+        csv.writer(sys.stdout, dialect=dialect).writerows(results)
+        return
+    if args.output:
+        with args.output.open('w') as fs:
+            csv.writer(fs, dialect=dialect).writerows(results)
+    if args.unheadedOutput:
+        with args.unheadedOutput.open('w') as fs:
+            csv.writer(fs, dialect=dialect).writerows(results[1:])
 
 
 def print_error_and_exit(msg):
     """ prints msg to the standard error output and exists """
     print(msg, file=sys.stderr)
     sys.exit(1)
+
 
 def print_error_run_function_and_exit(msg, function):
     """ prints msg to the standard error output, executes a function and exists """

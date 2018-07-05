@@ -7,9 +7,9 @@ Currently
 
   - (done) store input files in tuples (path, hasHeader)
   - (done) add -u option and store unheaded files in tuples (path, unheaded)
-  - store input/unheaded files in tuples (path, hasHeader|unheaded, newHeader)
+  - (done) allow spec output without headers (-O option)
+  - (dismissed) store input/unheaded files in tuples (path, hasHeader|unheaded, newHeader)
     for newHeader the one specified with the --header option
-  - allow spec output without headers
 
 ToDo
 ====
@@ -48,7 +48,7 @@ Enhancements
 
 - allow ignoring block statements /* */
 
-- allow specifying the headers of an input file. That is, consider that
+- (dismissed) allow specifying the headers of an input file. That is, consider that
   the file doesn't contain headers.
 
 - some optimizations:
