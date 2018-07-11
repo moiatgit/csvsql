@@ -11,3 +11,4 @@ Currently
 - doc/
   It should include a .html version but first use a simple .rst
 
+- review codestyle (e.g. with pycodestyle) already done with csvsql.py
