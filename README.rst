@@ -159,6 +159,62 @@ Documentation
 New features
 ------------
 
+- offer the inclusion of python expressions to the computation of fields
+
+  sql formulae tend to get quite complex for very simple use cases. For example
+  if you have the table (id, value01, value02, value03) and you want the output
+  (id, result) where result is computed as
+    result = 0 if value01 < 50 else min(value01, avg(value02, value03))
+
+  The resulting sql statement is… well, I'm unable to find it out without some
+  tries. The problem is that this kind of formula is quite common and varied,
+  so this feature gets high priority if I want to use csvsql
+
+  The syntax could be something like:
+
+    select id, 
+           !python("result",
+                   "value01 as value,value02,value03",
+                   "0 if value < 50 else min(value, avg(value02, value03))"),
+           another_field
+    from mytable
+
+  That would imply the following
+    - run query 'select id,value01 as value,value02,value03,another_field from mytable' on a temporary
+      table named view_n (id,value01,value02,value03,another_field)
+    - on the obtained result, generate a temporary table named view_n1 (id, result)
+      with result col containing the resulting of running python's expression
+      over the given variables
+    - run query 'select id,result,another_field from view_n,view_n1 where view_n = view_n1'
+      That would be the final result
+
+  Notice: for simplification, the first version could limit to one the number
+  of python expressions accepted in a statement. Otherwise, the 'other_field'
+  column should be considered too as possibly containing python expressions.
+
+  The !python() expression in this example has three args: the resulting column
+  name, the list of required fields, and the python expression.
+  The second arg should be replaced as is into the first query
+
+  Notice: sqlite allows multiple appearances of the same col name in the
+  results and 'select un,dos from (select 3 as un,dos,un from fefo)' is
+  possible over a 'un,dos\n1,2' table fefo, resulting as 'un,dos\n,3,2'
+  To avoid problems, at least document this! i.e. if the original statement
+  does select a certain column, then the python expression doesn't need to
+  specify it in the 2nd arg.
+
+    select id, 
+           value01,
+           !python("result",
+                   "value02,value03",
+                   "0 if value01 < 50 else min(value01, avg(value02, value03))"),
+           another_field
+    from mytable
+
+  Also, to force python given expression as actual expressions, it could
+  simply be implemented with a lambda formula encapsulated in a try statement
+
+
 - allow ignoring block statements ``/* */``
 
 - allow specification of dialect particularities (by default csv.excel)
