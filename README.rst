@@ -211,6 +211,41 @@ New features
            another_field
     from mytable
 
+  This would require that the python expression would get all the selected values as context. Since
+  it is possible for sqlite to select a col with the same name multiple times, it could represent a
+  crash-name problem. 
+  While a solution for this problem should be found, it should be remember that the csv module
+  already has this problem when dealing with csv
+  Consider:
+  $ cat fefo.csv
+  un,dos,un
+  1,2,3
+  $ cat trydict.py
+  import csv
+  with open('fefo.csv') as f:
+      reader = csv.DictReader(f)
+      for row in reader:
+          print(row['un'], row['dos'])
+  $ python3 trydict.py
+  3 2
+
+  That is, csv DictReader() is getting the last value it founds for the same column name
+  Unfortunately, csvsql currently is crashing on this kind of inputs
+
+  $ python3 csvsql/csvsqlcli.py -i /tmp/fefo.csv -s 'select un,dos from fefo'
+  Traceback (most recent call last):
+   File "csvsql/csvsqlcli.py", line 307, in <module>
+     csvsql_process_cml_args(sys.argv)
+   File "csvsql/csvsqlcli.py", line 104, in csvsql_process_cml_args
+     load_input(db, args.input)
+   File "csvsql/csvsqlcli.py", line 268, in load_input
+     csvsql.import_csv_list(db, files)
+   File "/home/moi/dev/csvsql/csvsql/csvsql.py", line 73, in import_csv_list
+     import_csv(db, fo, table_name, header=header)
+   File "/home/moi/dev/csvsql/csvsql/csvsql.py", line 47, in import_csv
+     db.execute('create table %s (%s);' % (table_name, colstr))
+  sqlite3.OperationalError: duplicate column name: un
+
   Also, to force python given expression as actual expressions, it could
   simply be implemented with a lambda formula encapsulated in a try statement
 
@@ -283,6 +318,26 @@ Optimizations
 
 Known bugs
 ==========
+
+- some sql statements break sqlcsvcli. e.g
+
+  $ cat fefo.csv
+  un,dos,un
+  1,2,3
+  $ python3 csvsqlcli.py -i fefo.csv -s 'select un,dos from fefo'
+  Traceback (most recent call last):
+    File "csvsql/csvsqlcli.py", line 307, in <module>
+      csvsql_process_cml_args(sys.argv)
+    File "csvsql/csvsqlcli.py", line 104, in csvsql_process_cml_args
+      load_input(db, args.input)
+    File "csvsql/csvsqlcli.py", line 268, in load_input
+      csvsql.import_csv_list(db, files)
+    File "/home/moi/dev/csvsql/csvsql/csvsql.py", line 73, in import_csv_list
+      import_csv(db, fo, table_name, header=header)
+    File "/home/moi/dev/csvsql/csvsql/csvsql.py", line 47, in import_csv
+      db.execute('create table %s (%s);' % (table_name, colstr))
+  sqlite3.OperationalError: duplicate column name: un
+
 
 - Installing from ``testpypi`` doesn't work properly
 
